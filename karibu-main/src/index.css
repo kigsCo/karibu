@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: #1C1613;
+  background-color: #EEE5D3;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Named utilities that mirror the original prototype */
+.font-serif-d { font-family: 'Instrument Serif', 'Georgia', serif; font-weight: 400; letter-spacing: -0.01em; }
+.font-sans-d  { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+
+.bg-ivory       { background-color: #F7F1E8; }
+.bg-ivory-2     { background-color: #F1E9DB; }
+.bg-clay        { background-color: #B8472E; }
+.bg-clay-soft   { background-color: #F3D9CF; }
+.bg-forest      { background-color: #2A3D2B; }
+.bg-forest-soft { background-color: #EBEFE9; }
+.bg-ochre       { background-color: #D4A341; }
+.bg-ochre-soft  { background-color: #FBF4E0; }
+.bg-ink         { background-color: #1C1613; }
+
+.text-clay     { color: #B8472E; }
+.text-forest   { color: #2A3D2B; }
+.text-ochre    { color: #D4A341; }
+.text-ochre-d  { color: #7A5A10; }
+.text-ink      { color: #1C1613; }
+.text-stone-w  { color: #8B8378; }
+
+.border-ink-10 { border-color: rgba(28,22,19,0.10); }
+.border-ink-20 { border-color: rgba(28,22,19,0.20); }
+.border-clay   { border-color: #B8472E; }
+.border-ochre  { border-color: #D4A341; }
+
+/* Phone frame shadow for the desktop preview */
+.phone-shadow {
+  box-shadow: 0 40px 80px -20px rgba(40,25,15,0.35),
+              0 20px 40px -10px rgba(40,25,15,0.20);
+}
+
+.kitenge-bg {
+  background-image:
+    radial-gradient(circle at 25% 30%, rgba(184,71,46,0.06) 0%, transparent 40%),
+    radial-gradient(circle at 75% 70%, rgba(42,61,43,0.05) 0%, transparent 40%);
+}
+
+.fade-in { animation: fadeIn 0.32s ease-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.scroll-x { scrollbar-width: none; -ms-overflow-style: none; }
+.scroll-x::-webkit-scrollbar { display: none; }
+
+.hide-scroll::-webkit-scrollbar { display: none; }
+.hide-scroll { scrollbar-width: none; }
+
+.greeting-cycle { animation: greetingFade 9s ease-in-out infinite; }
+@keyframes greetingFade {
+  0%, 22%   { opacity: 1; }
+  28%, 72%  { opacity: 0.4; }
+  78%, 100% { opacity: 1; }
+}
+
+.pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
