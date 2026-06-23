@@ -1,0 +1,13 @@
+-- 20260622233557_add_cities_sort_order.sql
+-- Give cities a deterministic display order.
+--
+-- The City Picker (and other screens) render cities in a curated order
+-- (Nairobi, Mombasa, Naivasha, Kisumu, Nakuru) -- not alphabetical, and not
+-- derivable from any existing column. Without an explicit sort key the frontend
+-- would have to fall back to created_at, which is identical across rows seeded
+-- in one statement and therefore non-deterministic (the live fetch could
+-- reorder the picker). `categories` already uses `sort_order` for exactly this;
+-- `cities` now matches. No index: cities is a tiny reference table fetched once
+-- on app load and cached in Context, so a sort index would add upkeep for no
+-- gain (mirrors the unindexed categories.sort_order).
+ALTER TABLE cities ADD COLUMN sort_order integer NOT NULL DEFAULT 0;

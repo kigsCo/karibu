@@ -1,0 +1,100 @@
+# Supabase local config for Karibu.
+# Docs: https://supabase.com/docs/guides/cli/config
+# `supabase start` reads this; `supabase db reset` applies migrations/ + seed.sql.
+
+project_id = "karibu"
+
+[api]
+enabled = true
+port = 54321
+# Only the public schema is exposed over PostgREST. Auth/storage have their own.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Postgres 15 (matches the production project — see CLAUDE.md tech stack table).
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[inbucket]
+# Local mailbox so we can inspect onboarding/auth emails during dev.
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+# The frontend origin. Override per-environment with SUPABASE_AUTH_SITE_URL.
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173", "https://karibu.co.ke"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+# Per-request isolation in production; "oneshot" is fine for local serve.
+policy = "oneshot"
+inspector_port = 8083
+
+# ---------------------------------------------------------------------------
+# Edge functions
+# verify_jwt controls whether the platform requires a valid Supabase JWT before
+# the function runs. Public/webhook/cron endpoints set it false and do their own
+# auth/validation; user-acting endpoints set it true.
+# ---------------------------------------------------------------------------
+
+# Public: browser calls this directly (no login required to chat with the guide).
+# Auth/abuse handling is inside the function.
+[functions.ask-karibu]
+verify_jwt = false
+
+# User-acting: only logged-in users may submit a review. JWT required so the
+# reviewer_id = auth.uid() RLS check has an identity to bind to.
+[functions.submit-review]
+verify_jwt = true
+
+# CRON — hourly. Classifies pending_moderation reviews via Claude.
+# Schedule (configured in the Supabase dashboard / cron, not here):
+#   0 * * * *   (every hour, on the hour)
+# verify_jwt off: invoked by the scheduler with the service role, not a user.
+[functions.moderate-reviews]
+verify_jwt = false
+
+# CRON — nightly at 03:00 EAT (Africa/Nairobi, UTC+3 => 00:00 UTC).
+# Recomputes ranking_score for every active business, then runs the
+# improvement-window helpers and refreshes analytics MVs.
+# Schedule: 0 0 * * *  (00:00 UTC == 03:00 EAT)
+# verify_jwt off: scheduler-invoked with the service role.
+[functions.calculate-rankings]
+verify_jwt = false
+
+# Public: M-Pesa STK push is initiated from the browser checkout flow.
+[functions.mpesa-stk-push]
+verify_jwt = false
+
+# Public WEBHOOK: Safaricom Daraja posts the payment result here. It cannot send
+# a Supabase JWT, so verify_jwt MUST be off; the handler validates the payload.
+[functions.mpesa-callback]
+verify_jwt = false
+
+# Internal/transactional: triggered after a successful subscription. No user JWT.
+[functions.send-onboarding-email]
+verify_jwt = false
