@@ -15,169 +15,15 @@ import {
   Gift, Store, Croissant, ChefHat, Activity, Carrot,
   Trees, Key, Scale, Ruler, Warehouse,
 } from "lucide-react";
+import { supabase } from "./lib/supabase";
+// KAR-5: `cities` and `categories` now come from Supabase (fetched once on app
+// load) via the ReferenceDataProvider in App.jsx; read them inside each screen
+// with `useReferenceData()`. The byte-identical prototype literals live in
+// src/data/referenceData.js as the initial/fallback value (identical first
+// paint, and the app still renders if Supabase is unreachable).
+import { useReferenceData } from "./context/ReferenceDataContext.jsx";
 
 // ---------- DATA ----------
-const cities = [
-  { key: "nairobi", label: "Nairobi", tagline: "The capital", hoods: ["Westlands", "Karen", "Kilimani", "Lavington", "CBD", "Parklands"] },
-  { key: "mombasa", label: "Mombasa", tagline: "Coastal", hoods: ["Nyali", "Diani", "Bamburi", "Old Town", "CBD", "Shanzu"] },
-  { key: "naivasha", label: "Naivasha", tagline: "Lake & wildlife", hoods: ["Town", "Lakeshore", "Hell's Gate"] },
-  { key: "kisumu", label: "Kisumu", tagline: "Lake Victoria", hoods: ["Milimani", "CBD", "Riat Hills"] },
-  { key: "nakuru", label: "Nakuru", tagline: "Rift Valley", hoods: ["Milimani", "Section 58", "CBD"] },
-];
-
-const categories = [
-  {
-    key: "hotels",
-    label: "Hotels & Housing",
-    Icon: Hotel,
-    blurb: "Stays for every length",
-    subTypes: [
-      { key: "hotels", label: "Hotels", Icon: Hotel },
-      { key: "resorts", label: "Resorts", Icon: Palmtree },
-      { key: "airbnb", label: "Airbnb", Icon: Home },
-      { key: "bnb", label: "Bed & Breakfast", Icon: Bed },
-      { key: "vacation", label: "Vacation Homes", Icon: Building },
-      { key: "short_rentals", label: "Short-term Rentals", Icon: Building2 },
-      { key: "long_rentals", label: "Long-term Rentals", Icon: Building2 },
-    ],
-  },
-  {
-    key: "transport",
-    label: "Transportation",
-    Icon: Car,
-    blurb: "Get around with ease",
-    subTypes: [
-      { key: "airport", label: "Airport Transfers", Icon: Plane },
-      { key: "taxi", label: "Taxi Cabs", Icon: Car },
-      { key: "private_taxi", label: "Private Taxis", Icon: Car },
-      { key: "uber", label: "Uber", Icon: Car },
-      { key: "bolt", label: "Bolt", Icon: Car },
-      { key: "matatu", label: "Matatu & Public Transport", Icon: Users },
-    ],
-  },
-  {
-    key: "money",
-    label: "Money & Banking",
-    Icon: Banknote,
-    blurb: "Cash, forex, ATMs",
-    subTypes: [
-      { key: "forex", label: "Currency Exchange", Icon: Banknote },
-      { key: "banks", label: "Banks", Icon: Landmark },
-      { key: "atms", label: "ATMs", Icon: Landmark },
-    ],
-  },
-  {
-    key: "health",
-    label: "Hospital & Pharmacy",
-    Icon: HeartPulse,
-    blurb: "Urgent and routine care",
-    subTypes: [
-      { key: "urgent", label: "Urgent Care", Icon: Activity },
-      { key: "emergency", label: "Emergency Room", Icon: Hospital },
-      { key: "clinics", label: "Clinics", Icon: Stethoscope },
-      { key: "chemists", label: "Chemists & Pharmacy", Icon: Pill },
-    ],
-  },
-  {
-    key: "safari",
-    label: "Safaris & Attractions",
-    Icon: Mountain,
-    blurb: "Wildlife & day trips",
-    subTypes: [], // Single-level — books direct
-  },
-  {
-    key: "beauty",
-    label: "Health & Beauty",
-    Icon: Sparkle,
-    blurb: "Salons, spas, fitness",
-    subTypes: [
-      { key: "hair", label: "Hair Salons", Icon: Scissors },
-      { key: "nails", label: "Nail Salons", Icon: Sparkle },
-      { key: "spa", label: "Spas", Icon: Sparkle },
-      { key: "massage", label: "Massage", Icon: Sparkle },
-      { key: "gym", label: "Gyms", Icon: Dumbbell },
-    ],
-  },
-  {
-    key: "restaurants",
-    label: "Restaurants",
-    Icon: UtensilsCrossed,
-    blurb: "Cuisines from around the world",
-    // Restaurants use cuisine *tags* rather than sub-categories
-    cuisineTags: [
-      { key: "steak", label: "Steakhouse", Icon: Beef },
-      { key: "chinese", label: "Chinese", Icon: ChefHat },
-      { key: "italian", label: "Italian", Icon: ChefHat },
-      { key: "seafood", label: "Seafood", Icon: ChefHat },
-      { key: "nyama_choma", label: "Nyama Choma", Icon: Beef },
-      { key: "kenyan", label: "Kenyan Local", Icon: ChefHat },
-      { key: "international", label: "International", Icon: ChefHat },
-    ],
-    subTypes: [], // No sub-types — use cuisine tags instead
-  },
-  {
-    key: "cafes",
-    label: "Cafés & Coffee",
-    Icon: Coffee,
-    blurb: "Brunch and good coffee",
-    subTypes: [],
-  },
-  {
-    key: "laundry",
-    label: "Laundry & Dry Cleaning",
-    Icon: Shirt,
-    blurb: "Wash, fold, pressed",
-    subTypes: [],
-  },
-  {
-    key: "grocery",
-    label: "Groceries & Markets",
-    Icon: ShoppingCart,
-    blurb: "Food shopping made easy",
-    subTypes: [
-      { key: "supermarket", label: "Supermarkets", Icon: ShoppingCart },
-      { key: "butchery", label: "Butchery", Icon: Beef },
-      { key: "farmers", label: "Farmer's Market", Icon: Carrot },
-      { key: "bakery", label: "Bakery", Icon: Cake },
-    ],
-  },
-  {
-    key: "nightlife",
-    label: "Nightlife",
-    Icon: Wine,
-    blurb: "Bars, clubs, sports",
-    subTypes: [
-      { key: "sports_bar", label: "Sports Bars", Icon: Beer },
-      { key: "clubs", label: "Clubs", Icon: Music },
-    ],
-  },
-  {
-    key: "shopping",
-    label: "Shopping",
-    Icon: ShoppingBag,
-    blurb: "Boutiques & souvenirs",
-    subTypes: [
-      { key: "boutiques", label: "Local Boutiques", Icon: Store },
-      { key: "souvenirs", label: "Souvenirs", Icon: Gift },
-    ],
-  },
-  {
-    key: "real_estate",
-    label: "Real Estate",
-    Icon: Building2,
-    blurb: "Buy land, homes & more",
-    subTypes: [
-      { key: "homes_sale", label: "Homes for Sale", Icon: Home },
-      { key: "apartments_sale", label: "Apartments for Sale", Icon: Building },
-      { key: "land_sale", label: "Land for Sale", Icon: Trees },
-      { key: "commercial", label: "Commercial Property", Icon: Warehouse },
-      { key: "agents", label: "Real Estate Agents", Icon: Key },
-      { key: "lawyers", label: "Property Lawyers", Icon: Scale },
-      { key: "surveyors", label: "Surveyors", Icon: Ruler },
-    ],
-  },
-];
-
 const visitorEssentials = [
   { label: "SIM & Data", sub: "Safaricom, Airtel", Icon: Wifi },
   { label: "Forex", sub: "Best rates today", Icon: Banknote },
@@ -693,6 +539,7 @@ const GlobalStyles = () => (
 
 // ---------- SCREEN: DISCOVER ----------
 const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
+  const { cities, categories } = useReferenceData();
   const placeholders = [
     "nails in Westlands",
     "airport transfer tonight",
@@ -978,6 +825,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
 
 // ---------- SCREEN: SUB-CATEGORY PICKER ----------
 const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+  const { cities } = useReferenceData();
   const cat = payload;
   if (!cat) return null;
   const city = cities.find((c) => c.key === activeCity) || cities[0];
@@ -1084,6 +932,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 
 // ---------- SCREEN: CATEGORY ----------
 const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+  const { cities } = useReferenceData();
   const city = cities.find((c) => c.key === activeCity) || cities[0];
   const hoods = [`All ${city.label}`, ...city.hoods];
   const [activeHood, setActiveHood] = useState(hoods[0]);
@@ -1979,6 +1828,7 @@ const BusinessSignupScreen = ({ back }) => {
 
 // ---------- SCREEN: CITY PICKER ----------
 const CityPickerScreen = ({ back, activeCity, onSelect }) => {
+  const { cities } = useReferenceData();
   return (
     <div className="fade-in">
       <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
@@ -2039,6 +1889,7 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
 
 // ---------- SCREEN: ASK KARIBU (AI search) ----------
 const AskKaribuScreen = ({ back, go, activeCity }) => {
+  const { cities } = useReferenceData();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -2053,38 +1904,6 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
     `Romantic dinner under KSh 5,000 per person`,
   ];
 
-  const systemPrompt = `You are Karibu, a warm, knowledgeable local guide helping visitors, tourists, and newcomers find trusted services in Kenya.
-
-Current city: ${cityLabel}.
-
-IMPORTANT: Only recommend businesses from this verified Karibu directory. If the user asks about something outside this list, acknowledge you don't have a verified match yet and suggest they browse the broader category.
-
-Karibu organizes services in 13 parent categories: Hotels & Housing (hotels, resorts, Airbnb, B&Bs, vacation homes, short/long-term rentals), Transportation (airport transfers, taxis, private taxis, Uber, Bolt, matatu & public transport), Money & Banking (forex, banks, ATMs), Hospital & Pharmacy (urgent care, ER, clinics, chemists), Safaris & Attractions, Health & Beauty (hair, nails, spa, massage, gym), Restaurants (by cuisine: steak, Chinese, Italian, seafood, nyama choma, Kenyan local, international), Cafés & Coffee, Laundry & Dry Cleaning, Groceries & Markets (supermarkets, butchery, farmer's market, bakery), Nightlife (sports bars, clubs), Shopping (boutiques, souvenirs), and Real Estate (homes for sale, apartments for sale, land for sale, commercial property, real estate agents, property lawyers, surveyors — primarily for expats and newcomers planning longer stays, not tourists).
-
-For Real Estate questions specifically: Kenya has a serious land-fraud problem and visitors asking about buying property MUST be told to use both a vetted property lawyer (for title verification and conveyancing) and a licensed surveyor (for boundary confirmation) before any purchase. Never let a question about "land for sale" pass without mentioning these safeguards. Recommend they search Karibu's "Property Lawyers" and "Surveyors" sub-categories before committing to any deal.
-
-Verified directory (currently seeded):
-- Posh Palace Salon (Westlands, Nairobi) — nails/braids/pedicure, KSh 1,500–6,000, Karibu Recommended, 4.8★
-- Ashleys (Lavington, Nairobi) — full-service salon, KSh 1,200–5,500, 4.6★
-- La Beauté (Kilimani, Nairobi) — Brazilian blowout/nails, KSh 2,000–7,000, 4.5★
-- Sayuri Nail Bar (Westlands, Nairobi) — nails only, KSh 2,500–4,500, 4.9★
-- The Talisman (Karen, Nairobi) — pan-Asian restaurant, KSh 2,500–5,000 pp, 4.7★
-- Mama Oliech's (Parklands, Nairobi) — fish/seafood, traditional Kenyan, 4.7★
-- Artcaffe Westgate (Westlands, Nairobi) — brunch/cafe/wifi, KSh 500–1,800, 4.4★
-- Connect Coffee Roasters (Lavington, Nairobi) — specialty coffee, 4.8★
-- Nairobi National Park Safari — day trip, wildlife, 4.9★
-
-When asked about categories without seeded businesses yet (e.g. hotels, supermarkets, hospitals), give honest, practical Kenya-specific recommendations from general local knowledge — naming well-known options like Java House for cafés, Carnivore for nyama choma, Naivas/Carrefour for supermarkets, Aga Khan/Nairobi Hospital for healthcare. Note that these are not yet "Karibu Recommended" but are well-known options. Encourage feedback if they end up using one.
-
-You also have access to the Karibu editorial guides library covering: Safety in Nairobi (what to avoid, neighbourhood safety, phone snatchings, ATM safety), Neighbourhoods & where to stay (Westlands, Karen, Kilimani, Lavington, Gigiri, CBD), Transport (Uber/Bolt vs matatus, traffic patterns, expressway, boda bodas), Money & M-Pesa (how to set up as a visitor, tipping, forex), Culture & Etiquette (greetings, tipping, photography), and Health (vaccines, malaria, water, hospitals). When the user asks about any of these topics, draw on this knowledge and briefly mention "there's a full guide on this in the Guides tab" at the end if relevant.
-
-Format your reply:
-- Keep it short (under 120 words)
-- Name 1-3 specific businesses with the neighborhood and one concrete reason each, OR give practical advice from the guides
-- If asking for clarifying info would help, ask ONE short question at the end
-- No markdown headers or bullet lists — write in natural prose like a helpful local friend
-- Use Swahili greetings sparingly ("Karibu" only in greeting, not repeatedly)`;
-
   const sendMessage = async (promptText) => {
     const userMsg = { role: "user", content: promptText };
     const nextMessages = [...messages, userMsg];
@@ -2094,23 +1913,25 @@ Format your reply:
     setError(null);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
+      // The Anthropic key never touches the browser. We call the ask-karibu
+      // edge function, which holds the Anthropic API key server-side, grounds
+      // the reply in the live verified directory, and returns the raw Anthropic
+      // Messages response — so the content parsing below is unchanged.
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "ask-karibu",
+        {
+          body: {
+            messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            city: activeCity,
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+      if (fnError) {
+        throw new Error(fnError.message || "Ask Karibu request failed");
       }
 
-      const data = await response.json();
-      const text = data.content
+      const text = data?.content
         ?.map((i) => (i.type === "text" ? i.text : ""))
         .filter(Boolean)
         .join("\n") || "I'm not sure how to help with that just yet.";
@@ -2521,6 +2342,7 @@ const MerchantDashboardScreen = ({ back }) => {
 
 // ---------- SCREEN: GUIDES HUB ----------
 const GuidesHubScreen = ({ go, activeCity }) => {
+  const { cities } = useReferenceData();
   const featured = guides.filter((g) => g.featured);
   const cityLabel = cities.find((c) => c.key === activeCity)?.label || "Nairobi";
 
