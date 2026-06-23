@@ -4,11 +4,11 @@
 
 Karibu is a services-discovery app for tourists, expats, and newcomers to Kenya — built to answer the questions every visitor asks in their first week: *Where can I get my nails done? Which restaurant won't disappoint? Is this neighbourhood safe after dark? How does M-Pesa actually work?*
 
-This repository contains the React frontend prototype, editorial guide content, and the structure for the merchant dashboard. Backend (Supabase), auth, and AI search integration are wired in Lovable — see `docs/LOVABLE_DEPLOYMENT.md`.
+This repository contains the React frontend prototype, editorial guide content, and the structure for the merchant dashboard. The production backend is now scaffolded in-repo under `supabase/` (Postgres schema, RLS, edge functions, seed data), with full build context for Claude Code in `CLAUDE.md` and `docs/`. The backend can alternatively be wired via Lovable — see `docs/LOVABLE_DEPLOYMENT.md`.
 
 ## What's in the app
 
-- **Service discovery** across 12 categories — salons, restaurants, rides, cafés, pharmacies, gyms, and more — in Nairobi, Mombasa, Naivasha, Kisumu, and Nakuru.
+- **Service discovery** across 13 categories — salons, restaurants, rides, cafés, pharmacies, gyms, and more — in Nairobi, Mombasa, Naivasha, Kisumu, and Nakuru.
 - **Karibu Recommended** — a verified-businesses tier driven by reviews, not advertising spend.
 - **Review system** with star ratings, country-tagged reviewers, service tags, and a rating-distribution view. Low-rated businesses enter a 60-day improvement window before being unlisted.
 - **Ask Karibu AI** — a conversational assistant that only recommends verified businesses from the real directory.
@@ -60,28 +60,37 @@ The Anthropic API key is **never** placed in frontend env vars. It lives only in
 
 ```
 karibu/
+├── CLAUDE.md                The project brain — read first (Claude Code loads it each session)
 ├── public/                  Static assets (icon, OG images)
 ├── src/
 │   ├── App.jsx              Top-level route wrapper
-│   ├── KaribuApp.jsx        Main prototype (single component for now)
+│   ├── KaribuApp.jsx        Main prototype (single component — migrate data, not design)
 │   ├── main.jsx             Entry point
 │   ├── index.css            Tailwind + brand utility classes
-│   ├── components/          (Reserved — Lovable will populate as the
-│   │                         prototype is split into smaller pieces)
-│   ├── pages/               (Reserved — future route-based pages)
-│   ├── data/                (Reserved — seed data for businesses/guides)
-│   ├── lib/                 (Reserved — Supabase client, API helpers)
-│   └── hooks/               (Reserved — custom React hooks)
-├── docs/
-│   ├── LOVABLE_DEPLOYMENT.md    How to deploy via Lovable for QA
-│   ├── BUSINESS_OWNER_GUIDE.md  Partner-facing preview guide
-│   └── GITHUB_PUBLISHING.md     Publishing paths (this doc matters)
+│   ├── CLAUDE.md            Frontend area rules
+│   ├── lib/                 Supabase client + API helpers
+│   ├── hooks/               Data hooks (useBusinesses, …)
+│   ├── data/                Reference data extracted from the prototype
+│   ├── components/          Populated incrementally as screens are split
+│   └── pages/               Populated incrementally as screens are split
+├── supabase/
+│   ├── CLAUDE.md            Backend area rules
+│   ├── config.toml          Local stack + per-function verify_jwt
+│   ├── migrations/          Numbered SQL — schema, RLS, triggers, OLAP views
+│   ├── functions/           Deno edge functions (ask-karibu, …) + _shared/
+│   ├── tests/               RLS + function tests
+│   └── seed.sql             Launch data from the prototype constants
+├── docs/                    ARCHITECTURE, DATA_MODEL, SCALABILITY, SECURITY, OPERATIONS, adr/, SPRINT_01, dev guide
+├── .claude/                 Claude Code tooling — settings, skills/, agents/, commands/
+├── .github/workflows/       CI (lint, build, deploy functions)
+├── .mcp.json                Supabase MCP server
+├── tools/karibu-dev-marketplace/   Installable "karibu-dev" plugin + marketplace
 ├── tailwind.config.js
 ├── vite.config.js
 └── package.json
 ```
 
-The prototype is currently a single 2,900-line component in `KaribuApp.jsx`. This is intentional for the first push — it keeps the prototype stable while you set up Lovable, and lets you split it into proper pages/components iteratively once connected. **Don't split it manually before pushing** — Lovable's agent does this well when you ask it to, and pre-splitting increases the chance of breaking something.
+The prototype is currently a single ~3,200-line component in `KaribuApp.jsx`. This is intentional for the first push — it keeps the prototype stable while you set up Lovable, and lets you split it into proper pages/components iteratively once connected. **Don't split it manually before pushing** — Lovable's agent does this well when you ask it to, and pre-splitting increases the chance of breaking something.
 
 ## Design system
 

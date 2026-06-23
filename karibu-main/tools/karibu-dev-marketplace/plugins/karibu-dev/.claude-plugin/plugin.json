@@ -1,0 +1,19 @@
+{
+  "name": "karibu-dev",
+  "displayName": "Karibu Dev Toolkit",
+  "version": "0.1.0",
+  "description": "Skills, agents, and commands for building the Karibu backend on Supabase.",
+  "author": {
+    "name": "Kigs Apex Solutions",
+    "email": "engineering@karibu.co.ke"
+  },
+  "homepage": "https://kigsapexsolutions.com",
+  "license": "UNLICENSED",
+  "keywords": [
+    "karibu",
+    "supabase",
+    "kenya",
+    "edge-functions",
+    "postgres"
+  ]
+}
