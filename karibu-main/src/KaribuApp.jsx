@@ -22,6 +22,12 @@ import { supabase } from "./lib/supabase";
 // src/data/referenceData.js as the initial/fallback value (identical first
 // paint, and the app still renders if Supabase is unreachable).
 import { useReferenceData } from "./context/ReferenceDataContext.jsx";
+// KAR-6: `recommended` + `salonsList` now come from Supabase via the
+// keyset-paginated useBusinesses hook; the prototype constants below remain as
+// the initial/fallback value (identical first paint, and the app still renders
+// if Supabase is unreachable).
+import { useBusinesses } from "./hooks/useBusinesses.js";
+import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
 
 // ---------- DATA ----------
 const visitorEssentials = [
@@ -540,6 +546,11 @@ const GlobalStyles = () => (
 // ---------- SCREEN: DISCOVER ----------
 const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
   const { cities, categories } = useReferenceData();
+  // KAR-6: the carousel reads the live top-ranked active businesses. Not
+  // city-filtered — the prototype shows the same cards in every city, and an
+  // empty rail would collapse the section; live-and-empty keeps the fallback.
+  const { items: liveTop } = useBusinesses({ fallback: recommended });
+  const topBusinesses = (liveTop.length ? liveTop : recommended).slice(0, 6);
   const placeholders = [
     "nails in Westlands",
     "airport transfer tonight",
@@ -674,7 +685,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
-          {recommended.map((b) => (
+          {topBusinesses.map((b) => (
             <button
               key={b.id}
               onClick={() => go("business", b)}
@@ -684,7 +695,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
                 <HeroImage variant={b.image} />
                 {b.badge && (
                   <div className="absolute top-2 left-2">
-                    <Badge kind="recommended">Karibu Recommended</Badge>
+                    <Badge kind={b.badge === "Verified" ? "verified" : "recommended"}>{b.badge}</Badge>
                   </div>
                 )}
               </div>
@@ -938,9 +949,22 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   const [activeHood, setActiveHood] = useState(hoods[0]);
   const [activeSort, setActiveSort] = useState("Recommended");
 
-  // Only Nairobi salons (Beauty → nails) has seeded businesses in the prototype
+  // Only Nairobi salons (Beauty → nails) was seeded in the prototype constants
   const isBeautyNails = payload?.key === "beauty" && (!payload?.subType || payload?.subType?.key === "nails");
-  const hasListings = activeCity === "nairobi" && isBeautyNails;
+
+  // KAR-6: live listings for this city/category/sub-type. Until the first live
+  // page resolves the prototype behaviour holds (salonsList for the one seeded
+  // case, "coming soon" otherwise); once live, the database decides — an empty
+  // result shows the existing "coming soon" state.
+  const { items: liveItems, live } = useBusinesses({
+    citySlug: activeCity,
+    categorySlug: payload?.key,
+    subTypeSlug: payload?.subType?.key,
+    fallback: activeCity === "nairobi" && isBeautyNails ? salonsList : [],
+  });
+  const hasListings = live
+    ? liveItems.length > 0
+    : activeCity === "nairobi" && isBeautyNails;
 
   const subTypeLabel = payload?.subType?.label;
   const screenTitle = subTypeLabel
@@ -949,13 +973,15 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 
   const filtered = useMemo(() => {
     if (!hasListings) return [];
-    let list = [...salonsList];
+    let list = [...liveItems];
     if (!activeHood.startsWith("All ")) list = list.filter((s) => s.hood === activeHood);
-    if (activeSort === "Closest") list.sort((a, b) => a.distanceKm - b.distanceKm);
+    // Live rows may lack distanceKm/openNow (no user geolocation or hours data
+    // yet) — sort unknown distances last, and "Open now" only keeps known-open.
+    if (activeSort === "Closest") list.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
     if (activeSort === "Top rated") list.sort((a, b) => b.rating - a.rating);
     if (activeSort === "Open now") list = list.filter((s) => s.openNow);
     return list;
-  }, [activeHood, activeSort, hasListings]);
+  }, [liveItems, activeHood, activeSort, hasListings]);
 
   return (
     <div className="fade-in pb-4">
@@ -1019,7 +1045,9 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
         {filtered.map((s) => (
           <button
             key={s.id}
-            onClick={() => go("business", recommended.find((r) => r.id === s.id) || { ...recommended[0], ...s, image: "posh" })}
+            // Live rows carry a slug and are passed as-is (BusinessScreen
+            // fetches full detail by slug); constants keep the prototype merge.
+            onClick={() => go("business", s.slug ? s : recommended.find((r) => r.id === s.id) || { ...recommended[0], ...s, image: "posh" })}
             className="w-full flex gap-3 p-2.5 rounded-2xl border border-ink-10 bg-white text-left"
           >
             <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
@@ -1028,14 +1056,16 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h4 className="font-semibold text-sm text-ink leading-tight">{s.name}</h4>
-                {s.openNow ? (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-forest flex-shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-forest pulse-dot" />
-                    Open
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-stone-w flex-shrink-0">Closed</span>
-                )}
+                {/* Unknown open-state (live rows without hours data) shows neither */}
+                {s.openNow != null &&
+                  (s.openNow ? (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-forest flex-shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-forest pulse-dot" />
+                      Open
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-stone-w flex-shrink-0">Closed</span>
+                  ))}
               </div>
               <p className="text-xs text-stone-w mt-0.5">{s.tagline}</p>
               <div className="flex items-center gap-1 mt-1">
@@ -1044,8 +1074,13 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
                 <span className="text-xs text-stone-w">({s.reviews})</span>
                 <span className="text-xs text-stone-w">·</span>
                 <span className="text-xs text-stone-w">{s.hood}</span>
-                <span className="text-xs text-stone-w">·</span>
-                <span className="text-xs text-stone-w">{s.distanceKm} km</span>
+                {/* Distance needs user geolocation — hidden until it exists */}
+                {s.distanceKm != null && (
+                  <>
+                    <span className="text-xs text-stone-w">·</span>
+                    <span className="text-xs text-stone-w">{s.distanceKm} km</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-1.5 mt-1.5">
                 {s.badge === "Karibu Recommended" && <Badge kind="recommended">Recommended</Badge>}
@@ -1094,11 +1129,17 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const b = payload || recommended[0];
   const [saved, setSaved] = useState(false);
 
-  // Fall back to full data if the payload was a lightweight list item
-  const full = { ...recommended[0], ...b };
+  // KAR-7: live-sourced payloads carry a slug — fetch the full row + published
+  // reviews. Constant-sourced payloads have no slug; the hook stays inert and
+  // the prototype merge below behaves exactly as before.
+  const { business: liveBiz, reviews: liveReviews } = useBusinessDetail(b.slug);
 
-  // Combine existing seed reviews with new user-submitted ones (new first)
-  const allReviews = [...reviews, ...reviewsSample];
+  // Fall back to full data if the payload was a lightweight list item
+  const full = { ...recommended[0], ...b, ...(liveBiz || {}) };
+
+  // Combine existing seed reviews with new user-submitted ones (new first).
+  // Once the published set is live it replaces the sample constants.
+  const allReviews = [...reviews, ...(liveReviews ?? reviewsSample)];
 
   // Live-computed rating: folds user reviews into the stored aggregate
   const seedSum = full.rating * full.reviews;
@@ -1107,14 +1148,26 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const liveRating =
     totalCount > 0 ? (seedSum + addSum) / totalCount : full.rating;
 
-  // Rating distribution for visual richness
-  const distribution = [
-    { stars: 5, pct: 72 },
-    { stars: 4, pct: 21 },
-    { stars: 3, pct: 5 },
-    { stars: 2, pct: 1 },
-    { stars: 1, pct: 1 },
-  ];
+  // Rating distribution — computed from the live published reviews when we
+  // have them; the prototype's illustrative split otherwise.
+  const distribution = liveReviews
+    ? [5, 4, 3, 2, 1].map((stars) => ({
+        stars,
+        pct: liveReviews.length
+          ? Math.round(
+              (liveReviews.filter((r) => r.rating === stars).length /
+                liveReviews.length) *
+                100,
+            )
+          : 0,
+      }))
+    : [
+        { stars: 5, pct: 72 },
+        { stars: 4, pct: 21 },
+        { stars: 3, pct: 5 },
+        { stars: 2, pct: 1 },
+        { stars: 1, pct: 1 },
+      ];
 
   // Rank within hood/category — derived from rating position in seed list
   const sameHoodAndCategory = salonsList.filter(
@@ -1409,7 +1462,50 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       serviceUsed: service || null,
       recommendation: recoLabel,
     };
+    // Optimistic local update first — the on-screen UX ("live after
+    // moderation") is identical whether or not the server write happens.
     onSubmit(biz.id, newReview);
+
+    // KAR-8: persist through the submit-review edge function when possible.
+    // It requires a signed-in user (verify_jwt = true) and a live business
+    // (dbId). Until the app ships an auth flow, guest reviews stay local-only.
+    if (biz.dbId) {
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const session = sessionData?.session;
+          if (!session) {
+            console.warn(
+              "[Karibu] review kept local — sign in required to persist reviews.",
+            );
+            return;
+          }
+          const { error: fnError } = await supabase.functions.invoke(
+            "submit-review",
+            {
+              body: {
+                business_id: biz.dbId,
+                reviewer_name:
+                  session.user.user_metadata?.full_name ||
+                  session.user.email?.split("@")[0] ||
+                  "Karibu visitor",
+                reviewer_country: country.replace(/^\S*\s+/, ""), // drop the flag emoji
+                reviewer_type: visitType.toLowerCase(),
+                rating,
+                body: text.trim(),
+                service_used: service || null,
+                recommendation, // the key the function validates: yes | caveats | no
+              },
+            },
+          );
+          if (fnError) {
+            console.error("[Karibu] submit-review failed:", fnError.message);
+          }
+        } catch (e) {
+          console.error("[Karibu] submit-review failed:", e);
+        }
+      })();
+    }
   };
 
   return (

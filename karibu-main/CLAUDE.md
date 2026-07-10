@@ -10,10 +10,10 @@ Built by Kigs Apex Solutions, Nairobi. Launch cities: Nairobi, Mombasa, Naivasha
 
 ## Where we are right now
 
-- The repo is a **static React prototype**. The entire app is one ~3,200-line component, `src/KaribuApp.jsx`, with hardcoded data constants and 14 screens.
-- There is **no backend yet**. We are building it now, per `docs/karibu-developer-guide.docx` (the canonical spec) and the docs in `docs/`.
-- **Current sprint:** Backend foundation — schema + RLS + seed live in Supabase. See `docs/SPRINT_01.md`.
-- **Target:** a launch-ready backend in ~2 weeks (solo dev).
+- The UI is still one ~3,200-line component, `src/KaribuApp.jsx` (14 screens), but its **data layer is migrated**: cities/categories via Context (KAR-5), listings via the keyset-paginated `useBusinesses` hook (KAR-6), business detail + published reviews by slug (KAR-7), review submission through `submit-review` when a session exists (KAR-8), and Ask Karibu through the `ask-karibu` proxy. The prototype constants remain as fallbacks — first paint is unchanged and the app still renders if Supabase is unreachable.
+- The backend is **scaffolded in-repo** (`supabase/`: 6 migrations, seed, 7 edge functions) and verified end-to-end against the local stack (`supabase start` + `db reset`). **No cloud project is provisioned yet** — `.env` points at the local stack; functions, secrets, and crons are not deployed anywhere real.
+- **Persisted reviews need an auth flow.** `submit-review` requires a signed-in user; until sign-in ships, guest reviews stay local-only (optimistic UI, console warning).
+- **Current sprint:** Backend foundation — see `docs/SPRINT_01.md`. **Target:** a launch-ready backend (solo dev).
 
 ## Architecture (intentionally simple)
 
