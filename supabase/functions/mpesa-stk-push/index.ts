@@ -5,16 +5,42 @@
 // Here we only START the payment and record a 'pending_payment' subscription
 // keyed by the CheckoutRequestID; the callback flips it to active/failed.
 //
-// verify_jwt = false (called from the public checkout flow). SANDBOX values are
-// used below — swap base URL + shortcode for production credentials at go-live.
+// verify_jwt = false (called from the public checkout flow, before sign-in
+// exists). SANDBOX values are used below — swap base URL + shortcode for
+// production credentials at go-live.
 //
-// Env (Supabase secrets): MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET,
-//   MPESA_PASSKEY, MPESA_CALLBACK_SECRET, and optionally MPESA_CALLBACK_URL.
+// ---------------------------------------------------------------------------
+// WHO CAN CALL THIS, AND WHY THAT MATTERS
+// ---------------------------------------------------------------------------
+// An STK push makes someone's phone buzz with a payment prompt. The someone is
+// whoever is named in `phone` — not the caller. So an unauthenticated endpoint
+// that takes a phone number and pushes a prompt to it is a harassment tool
+// pointed at third parties, paid for with our Daraja credentials, and it also
+// lets a stranger write `pending_payment` rows into `subscriptions` at will.
+//
+// Three things stand in the way, in this order:
+//
+//   1. MPESA_ENABLED. Off by default, so none of the below is even reachable
+//      until a human turns billing on. Live Daraja credentials need merchant
+//      approval (5-10 business days) and the guide is explicit that this must
+//      be gated behind config rather than block launch.
+//   2. A per-IP limit, which stops one caller from flooding us.
+//   3. A per-phone limit counted across every IP, which is the one that
+//      actually protects the person holding the phone — an attacker with a
+//      botnet has all the IPs they want, but the target number is fixed.
+//
+// Once a real checkout behind a signed-in user exists (Phase 5), this should
+// move to `verify_jwt = true` and drop to a per-user limit.
+//
+// Env (Supabase secrets): MPESA_ENABLED, MPESA_CONSUMER_KEY,
+//   MPESA_CONSUMER_SECRET, MPESA_PASSKEY, MPESA_CALLBACK_SECRET, and
+//   optionally MPESA_CALLBACK_URL.
 
 import { handleOptions } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/client.ts";
+import { checkGlobalRateLimit, checkIpRateLimit } from "../_shared/ratelimit.ts";
 import { errorResponse, json } from "../_shared/response.ts";
-import { withCallbackToken } from "../_shared/security.ts";
+import { clientIpFromXff, hmacHex, withCallbackToken } from "../_shared/security.ts";
 
 // Daraja SANDBOX. Production base is https://api.safaricom.co.ke
 const DARAJA_BASE = "https://sandbox.safaricom.co.ke";
@@ -27,11 +53,26 @@ const TIER_PRICING: Record<string, number> = {
   recommended: 7500,
 };
 
+// Abuse limits, per rolling hour. A genuine subscriber pushes once, maybe twice
+// if they fat-finger the PIN; nobody legitimately needs a fourth prompt.
+const IP_PUSHES_PER_HOUR = 5;
+const PHONE_PUSHES_PER_HOUR = 3;
+const RATE_WINDOW_SECONDS = 3600;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req: Request) => {
   const pre = handleOptions(req);
   if (pre) return pre;
 
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
+
+  // Default-deny. Nothing below runs — no parsing, no DB, no Daraja — until
+  // someone deliberately sets MPESA_ENABLED=true.
+  if (Deno.env.get("MPESA_ENABLED") !== "true") {
+    return errorResponse("M-Pesa payments are not enabled", 503);
+  }
 
   let body: { business_id?: string; tier?: string; phone?: string };
   try {
@@ -41,7 +82,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const { business_id, tier, phone } = body;
-  if (!business_id) return errorResponse("`business_id` is required", 400);
+  if (!business_id || !UUID_RE.test(business_id)) {
+    return errorResponse("`business_id` must be a uuid", 400);
+  }
   if (!tier || !(tier in TIER_PRICING)) {
     return errorResponse("`tier` must be one of verified|recommended", 400);
   }
@@ -60,6 +103,48 @@ Deno.serve(async (req: Request) => {
   if (!consumerKey || !consumerSecret || !passkey || !callbackSecret) {
     return errorResponse("Server misconfigured (M-Pesa secrets missing)", 500);
   }
+
+  const supabase = createServiceClient();
+
+  const ip = clientIpFromXff(req.headers.get("x-forwarded-for"));
+  const ipAllowed = await checkIpRateLimit(
+    supabase,
+    ip,
+    "mpesa-stk-push",
+    IP_PUSHES_PER_HOUR,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!ipAllowed) {
+    return errorResponse("Too many payment attempts. Try again later.", 429);
+  }
+
+  // Bucket the target under an HMAC keyed by a secret we already require here,
+  // so `rate_limits` never holds a subscriber's phone number in the clear.
+  const phoneBucket = `mpesa-stk-push:phone:${await hmacHex(callbackSecret, phone)}`;
+  const phoneAllowed = await checkGlobalRateLimit(
+    supabase,
+    phoneBucket,
+    PHONE_PUSHES_PER_HOUR,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!phoneAllowed) {
+    return errorResponse("Too many payment attempts for this number.", 429);
+  }
+
+  // A subscription row is about to be written against this id, so it had better
+  // name a real, active business. (Business uuids are already public — the
+  // guides API returns them — so a 404 here discloses nothing new.)
+  const { data: business, error: businessError } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", business_id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (businessError) {
+    console.error("business lookup failed:", businessError.message);
+    return errorResponse("Could not verify business", 500);
+  }
+  if (!business) return errorResponse("Unknown business", 404);
 
   const amount = TIER_PRICING[tier];
 
@@ -120,7 +205,6 @@ Deno.serve(async (req: Request) => {
 
   // 3) Record a pending subscription keyed by CheckoutRequestID. The callback
   //    matches on this id (stored in mpesa_transaction_id) to confirm/settle.
-  const supabase = createServiceClient();
   const now = new Date();
   const { error: insertError } = await supabase.from("subscriptions").insert({
     business_id,

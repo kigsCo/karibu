@@ -67,6 +67,31 @@ export function withCallbackToken(baseUrl: string, token: string): string {
   return url.toString();
 }
 
+/**
+ * HMAC-SHA256 of `value` under `secret`, hex-encoded.
+ *
+ * Used to bucket a phone number for rate limiting without ever writing the
+ * number itself to the database. A bare SHA-256 would be security theatre
+ * here: Kenyan mobile numbers live in a ~10^8 space, so anyone who got hold of
+ * the table could enumerate every digest in seconds and recover the numbers.
+ * Keying the digest with a server-side secret makes it meaningless to anyone
+ * who does not also hold that secret.
+ */
+export async function hmacHex(secret: string, value: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 
 /** True when `value` can be stored in a Postgres `inet` column. */

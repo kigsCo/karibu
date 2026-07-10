@@ -10,10 +10,16 @@
 
 import { handleOptions } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/client.ts";
+import { checkIpRateLimit } from "../_shared/ratelimit.ts";
 import { errorResponse, json } from "../_shared/response.ts";
+import { clientIpFromXff } from "../_shared/security.ts";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+
+// Chat turns per IP per hour. See the note at the call site on CGNAT.
+const ASK_PER_IP_PER_HOUR = 60;
+const RATE_WINDOW_SECONDS = 3600;
 
 Deno.serve(async (req: Request) => {
   const pre = handleOptions(req);
@@ -42,6 +48,27 @@ Deno.serve(async (req: Request) => {
   if (!apiKey) return errorResponse("Server misconfigured", 500);
 
   const supabase = createServiceClient();
+
+  // This endpoint is public by design — no login to chat with the guide — and
+  // every call it serves spends Anthropic tokens on our key. Unmetered, a `for`
+  // loop is a bill. Meter it before the model is ever reached.
+  //
+  // The ceiling is deliberately loose: a real conversation is a handful of
+  // turns, but Kenyan mobile traffic is heavily CGNAT'd, so an "IP" here can be
+  // a whole neighbourhood. Better to let a busy shared address through than to
+  // cut off a street. The hard cost ceiling belongs in Anthropic's own spend
+  // limits, not here; this only removes the trivial abuse.
+  const ip = clientIpFromXff(req.headers.get("x-forwarded-for"));
+  const allowed = await checkIpRateLimit(
+    supabase,
+    ip,
+    "ask-karibu",
+    ASK_PER_IP_PER_HOUR,
+    RATE_WINDOW_SECONDS,
+  );
+  if (!allowed) {
+    return errorResponse("You're asking a lot of questions! Try again shortly.", 429);
+  }
 
   // --- Fetch the verified directory (top 40 active by ranking) ----------
   const { data: businesses, error: dbError } = await supabase

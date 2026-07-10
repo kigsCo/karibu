@@ -1,10 +1,19 @@
 // send-onboarding-email — warm welcome email to a newly onboarded business.
 //
 // Sent via Resend after a business is created / a subscription activates.
-// verify_jwt = false (called internally / from server-side flows, not directly
-// by an end user). RESEND_API_KEY is a Supabase secret.
+//
+// verify_jwt = false (called from server-side flows, which carry no user JWT).
+// It authenticates with the `x-karibu-internal-secret` header instead; see
+// _shared/internal-auth.ts. Without that gate this is an open mail relay: any
+// stranger could POST a recipient and an attacker-chosen `businessName` and
+// have it delivered, signed and aligned, from our own verified sending domain.
+// The cost is not the email — it is the domain reputation, and the phish that
+// arrives looking exactly like us.
+//
+// RESEND_API_KEY is a Supabase secret.
 
 import { handleOptions } from "../_shared/cors.ts";
+import { requireInternalSecret } from "../_shared/internal-auth.ts";
 import { errorResponse, json } from "../_shared/response.ts";
 
 const RESEND_URL = "https://api.resend.com/emails";
@@ -16,6 +25,9 @@ Deno.serve(async (req: Request) => {
   if (pre) return pre;
 
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
+
+  const denied = requireInternalSecret(req);
+  if (denied) return denied;
 
   let body: { to?: string; businessName?: string; tier?: string };
   try {

@@ -59,6 +59,11 @@ inspector_port = 8083
 # verify_jwt controls whether the platform requires a valid Supabase JWT before
 # the function runs. Public/webhook/cron endpoints set it false and do their own
 # auth/validation; user-acting endpoints set it true.
+#
+# verify_jwt = true is NOT an authorization check. The anon key is a valid JWT
+# and it ships in the browser bundle, so "true" means "any visitor", not "our
+# backend". Functions that only our backend may call therefore keep verify_jwt
+# off and authenticate a shared secret themselves — see _shared/internal-auth.ts.
 # ---------------------------------------------------------------------------
 
 # Public: browser calls this directly (no login required to chat with the guide).
@@ -72,9 +77,9 @@ verify_jwt = false
 verify_jwt = true
 
 # CRON — hourly. Classifies pending_moderation reviews via Claude.
-# Schedule (configured in the Supabase dashboard / cron, not here):
-#   0 * * * *   (every hour, on the hour)
-# verify_jwt off: invoked by the scheduler with the service role, not a user.
+# Schedule: 0 * * * *  (see SUPABASE_SETUP.md "Scheduling the cron functions")
+# verify_jwt off: pg_cron holds no user JWT. Authenticated by the
+# x-karibu-internal-secret header (INTERNAL_FUNCTION_SECRET); 503 if unset.
 [functions.moderate-reviews]
 verify_jwt = false
 
@@ -82,11 +87,14 @@ verify_jwt = false
 # Recomputes ranking_score for every active business, then runs the
 # improvement-window helpers and refreshes analytics MVs.
 # Schedule: 0 0 * * *  (00:00 UTC == 03:00 EAT)
-# verify_jwt off: scheduler-invoked with the service role.
+# verify_jwt off: same as above — authenticated by x-karibu-internal-secret.
 [functions.calculate-rankings]
 verify_jwt = false
 
-# Public: M-Pesa STK push is initiated from the browser checkout flow.
+# Public: M-Pesa STK push is initiated from the browser checkout flow, so it
+# cannot require a JWT until sign-in ships. It is instead OFF unless
+# MPESA_ENABLED=true, and when on it rate-limits per source IP and per target
+# phone — an STK push rings a phone the caller does not own.
 [functions.mpesa-stk-push]
 verify_jwt = false
 
@@ -100,6 +108,8 @@ verify_jwt = false
 [functions.mpesa-callback]
 verify_jwt = false
 
-# Internal/transactional: triggered after a successful subscription. No user JWT.
+# Internal/transactional: triggered after a successful subscription. No user JWT,
+# so verify_jwt stays off and the x-karibu-internal-secret header authenticates
+# the caller. Ungated, this is an open mail relay from our verified domain.
 [functions.send-onboarding-email]
 verify_jwt = false

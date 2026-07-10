@@ -4,7 +4,10 @@
 // improvement-window maintenance helpers and refreshes the analytics MVs.
 // Heavy/batch — runs in the low-traffic window, off the request path (CLAUDE.md).
 //
-// verify_jwt = false — scheduler-invoked with the service role.
+// verify_jwt = false — the caller is pg_cron, which holds no user JWT. It
+// authenticates with the `x-karibu-internal-secret` header instead; see
+// _shared/internal-auth.ts. Left open, a stranger could rewrite ranking_score
+// for every active business on demand.
 //
 // ---------------------------------------------------------------------------
 // RANKING FORMULA (documented here; the source of truth for the algorithm)
@@ -35,6 +38,7 @@
 
 import { handleOptions } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/client.ts";
+import { requireInternalSecret } from "../_shared/internal-auth.ts";
 import { errorResponse, json } from "../_shared/response.ts";
 
 // Weights — keep in sync with the formula comment above.
@@ -70,6 +74,11 @@ interface BizRow {
 Deno.serve(async (req: Request) => {
   const pre = handleOptions(req);
   if (pre) return pre;
+
+  // pg_cron only. This handler rewrites ranking_score on every active business
+  // and can unlist businesses; it must never be reachable from a browser.
+  const denied = requireInternalSecret(req);
+  if (denied) return denied;
 
   const supabase = createServiceClient();
 
