@@ -68,16 +68,77 @@ running code disagree, **trust production** and update the doc.
 
 ---
 
-## Phase 2 — Backend foundation ✅ (in-repo; no cloud project yet)
+## Phase 2 — Backend foundation ✅
 
 - [x] `@supabase/supabase-js`, client at `src/lib/supabase.js`.
 - [x] `.env.example` with the two public `VITE_*` vars.
-- [x] Migrations under `supabase/migrations/` (6 files: schema, RLS, functions/triggers/
-      views, rate limits, role grants, `cities.sort_order`).
-- [x] RLS policies.
+- [x] Migrations under `supabase/migrations/` (8 files: schema, RLS, functions/triggers/
+      views, rate limits, role grants, `cities.sort_order`, payment/abuse hardening,
+      API-role grant lockdown).
+- [x] RLS policies. Verified on the cloud project: all 10 app tables have RLS on.
 - [x] `supabase/seed.sql` ports the prototype data; Nairobi salons are `status='active'`.
-- [ ] **Cloud project provisioned.** `.env` still points at the local stack.
-- [ ] `SUPABASE_SETUP.md` documenting the exact CLI steps.
+- [x] **Cloud project provisioned** — `karibu` (`jwiptjcpczamewmyaost`), `eu-central-1`,
+      free plan. All 8 migrations applied, seed loaded (5 cities, 13 categories,
+      47 sub-types, 10 active businesses, 6 published reviews, 2 published guides).
+      Remote migration versions were realigned to the repo filenames, so
+      `supabase db push` is now a no-op rather than a re-apply.
+- [x] `SUPABASE_SETUP.md` written.
+- [x] Every frontend hook query verified against the live API with the public anon key:
+      `ReferenceDataContext` (cities, categories + sub_types embed), `useBusinesses`
+      (keyset page + city/category/sub-type `!inner` filters), `useBusinessDetail`
+      (by slug + reviews). Anon sees only `published` reviews.
+
+### 🔴 Found during provisioning — the cloud grant model is the inverse of local
+
+`20260622225015_add_role_grants.sql` was written against the local stack, where
+migrations run as `postgres` and Supabase's auto-grant default privilege never fires,
+leaving the API roles with **no** privileges. In the cloud, default privileges hand
+`anon` and `authenticated` **every** privilege on every new table in `public`.
+
+Measured on the cloud project right after the first push:
+`has_table_privilege('anon','public.businesses','DELETE')` → `true`.
+
+RLS was still filtering the app tables — but that made RLS the only layer, and
+**materialized views are not subject to RLS at all**, so `mv_business_review_stats`
+(per-business pending-moderation counts) was readable by anyone with the public anon key.
+
+- [x] **Fixed** by `20260710160000_lock_down_api_role_grants.sql`: revoke everything from
+      the API roles, re-grant the intended model, pin `search_path` on all 7 functions.
+      Applied to cloud **and** local. Verified: the matviews now return `401 / 42501` to
+      anon, `anon` has no write privilege on any app table, and every app read still works.
+- [x] **`spatial_ref_sys` was INSERT/DELETE-able by `anon`.** PostGIS's own table: no RLS,
+      served by PostgREST, owned by `supabase_admin`. Cloud `postgres` is neither a
+      superuser nor a member of that role, so no migration could revoke it or enable RLS —
+      the `REVOKE` statements in an earlier draft were silent no-ops.
+      **Fixed** by `20260710170000_move_postgis_out_of_public.sql`: PostGIS and `pg_trgm`
+      now live in the unexposed `extensions` schema. PostGIS does not support
+      `ALTER EXTENSION … SET SCHEMA`, so it was dropped and recreated; `businesses.location`
+      was read by no code and NULL on every row, so nothing was lost. Verified: the three
+      PostGIS endpoints return `404 / PGRST205` (PostgREST no longer knows they exist),
+      every app read still returns `200`, and a fresh `supabase db reset` reproduces the
+      end state. This also cleared the `extension_in_public` and
+      `st_estimatedextent SECURITY DEFINER` warnings.
+      **Note for future migrations:** the `geography` type now lives in `extensions` and is
+      not on the default `search_path` — write `extensions.geography(...)` and
+      `extensions.gin_trgm_ops`.
+
+**Supabase security advisor is now clean**: zero ERROR, zero WARN. The two remaining INFO
+items (`ai_conversations` and `rate_limits` have RLS on with no policies) are intentional —
+those tables are service-role only.
+
+### Phase 2 follow-ups (not blockers for Phase 3/4)
+
+- [ ] `.mcp.json` still carries `--project-ref=YOUR_PROJECT_REF`. Replace with
+      `jwiptjcpczamewmyaost`. (Left for a human: editing the MCP startup config from an
+      agent session widens the agent's own tool surface.)
+- [ ] `.env` still points at the local stack. Switch it — or a host env var — to the cloud
+      project when you want the dev server reading live data.
+- [ ] `ranking_score` is `0` on every row until `calculate-rankings` runs, so Discover's
+      ordering is currently arbitrary (it falls through to the `id` tiebreaker).
+- [ ] **Transfer the project to a Kigs Apex organization** before go-live. It currently
+      lives in `allaniteba37@gmail.com's Org`.
+- [ ] **A free project pauses after 7 days of inactivity.** Upgrade to Pro ($25/mo) before
+      launch, per guide section 02.
 
 ## Phase 3 — Data migration ✅
 
