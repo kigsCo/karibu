@@ -1,0 +1,39 @@
+{
+  "id": "/",
+  "name": "Karibu",
+  "short_name": "Karibu",
+  "description": "A local guide for newcomers to Kenya. Find verified salons, restaurants, and services across Nairobi, Mombasa, Naivasha, Kisumu, and Nakuru.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#F7F1E8",
+  "background_color": "#EEE5D3",
+  "icons": [
+    {
+      "src": "/karibu-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}
