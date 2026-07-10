@@ -11,11 +11,17 @@ import { handleOptions } from "../_shared/cors.ts";
 import { createServiceClient, createUserClient } from "../_shared/client.ts";
 import { errorResponse, json } from "../_shared/response.ts";
 import { checkIpRateLimit } from "../_shared/ratelimit.ts";
+import { clientIpFromXff } from "../_shared/security.ts";
 
 const VALID_RECOMMENDATIONS = ["yes", "caveats", "no"];
 const MIN_BODY_LENGTH = 40;
 const RATE_LIMIT_MAX = 3; // per IP
 const RATE_LIMIT_WINDOW_SECONDS = 24 * 60 * 60; // 24h
+
+// Per-user limits, from the guide's anti-abuse section. Unlike the per-IP limit
+// these are bound to a verified `auth.uid()`, so no header can forge them.
+const USER_REVIEWS_PER_DAY = 3;
+const USER_REVIEWS_PER_BUSINESS_DAYS = 30;
 
 Deno.serve(async (req: Request) => {
   const pre = handleOptions(req);
@@ -79,13 +85,55 @@ Deno.serve(async (req: Request) => {
   const reviewerId = userData.user.id;
 
   // --- Derive reviewer IP for anti-abuse ---------------------------------
-  // x-forwarded-for may be a comma-separated list; the first hop is the client.
-  const forwardedFor = req.headers.get("x-forwarded-for") ?? "";
-  const reviewerIp = forwardedFor.split(",")[0].trim() || "0.0.0.0";
+  // The LAST x-forwarded-for hop is the one Supabase's edge appended, and is
+  // the only entry a client cannot forge. Reading the first hop would let any
+  // caller bypass the per-IP limit just by sending the header themselves.
+  const reviewerIp = clientIpFromXff(req.headers.get("x-forwarded-for"));
+
+  // Use the service client: rate_limits is locked down to the service role, and
+  // counting a user's own reviews must not be filtered by RLS.
+  const service = createServiceClient();
+
+  // --- Rate limit, per authenticated user --------------------------------
+  // Bound to auth.uid(), so it holds even if the IP is shared, rotated, or
+  // spoofed. This is the load-bearing limit; the per-IP one below is a second
+  // layer for a single user cycling accounts.
+  const dayAgo = new Date(Date.now() - RATE_LIMIT_WINDOW_SECONDS * 1000).toISOString();
+  const { count: recentByUser, error: userCountErr } = await service
+    .from("reviews")
+    .select("id", { count: "exact", head: true })
+    .eq("reviewer_id", reviewerId)
+    .gt("created_at", dayAgo);
+
+  if (userCountErr) {
+    // Fail open on a counting outage, exactly as checkIpRateLimit does: an
+    // anti-abuse layer must not take down the feature. RLS is still the backstop.
+    console.error("submit-review per-user count failed (failing open):", userCountErr.message);
+  } else if ((recentByUser ?? 0) >= USER_REVIEWS_PER_DAY) {
+    return errorResponse("Rate limit", 429);
+  }
+
+  // One review per business per 30 days, per the guide's anti-abuse rules.
+  const windowStart = new Date(
+    Date.now() - USER_REVIEWS_PER_BUSINESS_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const { count: recentForBusiness, error: bizCountErr } = await service
+    .from("reviews")
+    .select("id", { count: "exact", head: true })
+    .eq("reviewer_id", reviewerId)
+    .eq("business_id", business_id)
+    .gt("created_at", windowStart);
+
+  if (bizCountErr) {
+    console.error("submit-review per-business count failed (failing open):", bizCountErr.message);
+  } else if ((recentForBusiness ?? 0) >= 1) {
+    return errorResponse(
+      `You can review a business once every ${USER_REVIEWS_PER_BUSINESS_DAYS} days`,
+      429,
+    );
+  }
 
   // --- Rate limit (max 3 reviews per IP per 24h) -------------------------
-  // Use the service client: rate_limits is locked down to the service role.
-  const service = createServiceClient();
   const allowed = await checkIpRateLimit(
     service,
     reviewerIp,
