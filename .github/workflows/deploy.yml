@@ -22,9 +22,32 @@ jobs:
       - run: npm run build
       # - run: npm run test:unit   # add when you have tests
 
+  # The `secrets` context is not available in a job-level `if:`, so resolve it in a
+  # step and let the deploy job gate on the output. Until a cloud Supabase project
+  # exists, deploying is impossible — `supabase link` would fail on an empty ref.
+  check-config:
+    runs-on: ubuntu-latest
+    outputs:
+      supabase_configured: ${{ steps.check.outputs.supabase_configured }}
+    steps:
+      - id: check
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$SUPABASE_PROJECT_REF" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "supabase_configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SUPABASE_PROJECT_REF / SUPABASE_ACCESS_TOKEN are unset — skipping the edge-function deploy. Set both repository secrets to enable it."
+            echo "supabase_configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy-supabase-functions:
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [test, check-config]
+    if: >-
+      github.ref == 'refs/heads/main'
+      && github.event_name == 'push'
+      && needs.check-config.outputs.supabase_configured == 'true'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
