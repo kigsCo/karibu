@@ -1,0 +1,18 @@
+{
+  "name": "karibu-dev-marketplace",
+  "owner": {
+    "name": "Kigs Apex Solutions",
+    "email": "engineering@karibu.co.ke"
+  },
+  "plugins": [
+    {
+      "name": "karibu-dev",
+      "source": "./plugins/karibu-dev",
+      "description": "Skills, agents, and commands for building the Karibu backend on Supabase.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Kigs Apex Solutions"
+      }
+    }
+  ]
+}

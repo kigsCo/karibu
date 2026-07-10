@@ -15,169 +15,21 @@ import {
   Gift, Store, Croissant, ChefHat, Activity, Carrot,
   Trees, Key, Scale, Ruler, Warehouse,
 } from "lucide-react";
+import { supabase } from "./lib/supabase";
+// KAR-5: `cities` and `categories` now come from Supabase (fetched once on app
+// load) via the ReferenceDataProvider in App.jsx; read them inside each screen
+// with `useReferenceData()`. The byte-identical prototype literals live in
+// src/data/referenceData.js as the initial/fallback value (identical first
+// paint, and the app still renders if Supabase is unreachable).
+import { useReferenceData } from "./context/ReferenceDataContext.jsx";
+// KAR-6: `recommended` + `salonsList` now come from Supabase via the
+// keyset-paginated useBusinesses hook; the prototype constants below remain as
+// the initial/fallback value (identical first paint, and the app still renders
+// if Supabase is unreachable).
+import { useBusinesses } from "./hooks/useBusinesses.js";
+import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
 
 // ---------- DATA ----------
-const cities = [
-  { key: "nairobi", label: "Nairobi", tagline: "The capital", hoods: ["Westlands", "Karen", "Kilimani", "Lavington", "CBD", "Parklands"] },
-  { key: "mombasa", label: "Mombasa", tagline: "Coastal", hoods: ["Nyali", "Diani", "Bamburi", "Old Town", "CBD", "Shanzu"] },
-  { key: "naivasha", label: "Naivasha", tagline: "Lake & wildlife", hoods: ["Town", "Lakeshore", "Hell's Gate"] },
-  { key: "kisumu", label: "Kisumu", tagline: "Lake Victoria", hoods: ["Milimani", "CBD", "Riat Hills"] },
-  { key: "nakuru", label: "Nakuru", tagline: "Rift Valley", hoods: ["Milimani", "Section 58", "CBD"] },
-];
-
-const categories = [
-  {
-    key: "hotels",
-    label: "Hotels & Housing",
-    Icon: Hotel,
-    blurb: "Stays for every length",
-    subTypes: [
-      { key: "hotels", label: "Hotels", Icon: Hotel },
-      { key: "resorts", label: "Resorts", Icon: Palmtree },
-      { key: "airbnb", label: "Airbnb", Icon: Home },
-      { key: "bnb", label: "Bed & Breakfast", Icon: Bed },
-      { key: "vacation", label: "Vacation Homes", Icon: Building },
-      { key: "short_rentals", label: "Short-term Rentals", Icon: Building2 },
-      { key: "long_rentals", label: "Long-term Rentals", Icon: Building2 },
-    ],
-  },
-  {
-    key: "transport",
-    label: "Transportation",
-    Icon: Car,
-    blurb: "Get around with ease",
-    subTypes: [
-      { key: "airport", label: "Airport Transfers", Icon: Plane },
-      { key: "taxi", label: "Taxi Cabs", Icon: Car },
-      { key: "private_taxi", label: "Private Taxis", Icon: Car },
-      { key: "uber", label: "Uber", Icon: Car },
-      { key: "bolt", label: "Bolt", Icon: Car },
-      { key: "matatu", label: "Matatu & Public Transport", Icon: Users },
-    ],
-  },
-  {
-    key: "money",
-    label: "Money & Banking",
-    Icon: Banknote,
-    blurb: "Cash, forex, ATMs",
-    subTypes: [
-      { key: "forex", label: "Currency Exchange", Icon: Banknote },
-      { key: "banks", label: "Banks", Icon: Landmark },
-      { key: "atms", label: "ATMs", Icon: Landmark },
-    ],
-  },
-  {
-    key: "health",
-    label: "Hospital & Pharmacy",
-    Icon: HeartPulse,
-    blurb: "Urgent and routine care",
-    subTypes: [
-      { key: "urgent", label: "Urgent Care", Icon: Activity },
-      { key: "emergency", label: "Emergency Room", Icon: Hospital },
-      { key: "clinics", label: "Clinics", Icon: Stethoscope },
-      { key: "chemists", label: "Chemists & Pharmacy", Icon: Pill },
-    ],
-  },
-  {
-    key: "safari",
-    label: "Safaris & Attractions",
-    Icon: Mountain,
-    blurb: "Wildlife & day trips",
-    subTypes: [], // Single-level — books direct
-  },
-  {
-    key: "beauty",
-    label: "Health & Beauty",
-    Icon: Sparkle,
-    blurb: "Salons, spas, fitness",
-    subTypes: [
-      { key: "hair", label: "Hair Salons", Icon: Scissors },
-      { key: "nails", label: "Nail Salons", Icon: Sparkle },
-      { key: "spa", label: "Spas", Icon: Sparkle },
-      { key: "massage", label: "Massage", Icon: Sparkle },
-      { key: "gym", label: "Gyms", Icon: Dumbbell },
-    ],
-  },
-  {
-    key: "restaurants",
-    label: "Restaurants",
-    Icon: UtensilsCrossed,
-    blurb: "Cuisines from around the world",
-    // Restaurants use cuisine *tags* rather than sub-categories
-    cuisineTags: [
-      { key: "steak", label: "Steakhouse", Icon: Beef },
-      { key: "chinese", label: "Chinese", Icon: ChefHat },
-      { key: "italian", label: "Italian", Icon: ChefHat },
-      { key: "seafood", label: "Seafood", Icon: ChefHat },
-      { key: "nyama_choma", label: "Nyama Choma", Icon: Beef },
-      { key: "kenyan", label: "Kenyan Local", Icon: ChefHat },
-      { key: "international", label: "International", Icon: ChefHat },
-    ],
-    subTypes: [], // No sub-types — use cuisine tags instead
-  },
-  {
-    key: "cafes",
-    label: "Cafés & Coffee",
-    Icon: Coffee,
-    blurb: "Brunch and good coffee",
-    subTypes: [],
-  },
-  {
-    key: "laundry",
-    label: "Laundry & Dry Cleaning",
-    Icon: Shirt,
-    blurb: "Wash, fold, pressed",
-    subTypes: [],
-  },
-  {
-    key: "grocery",
-    label: "Groceries & Markets",
-    Icon: ShoppingCart,
-    blurb: "Food shopping made easy",
-    subTypes: [
-      { key: "supermarket", label: "Supermarkets", Icon: ShoppingCart },
-      { key: "butchery", label: "Butchery", Icon: Beef },
-      { key: "farmers", label: "Farmer's Market", Icon: Carrot },
-      { key: "bakery", label: "Bakery", Icon: Cake },
-    ],
-  },
-  {
-    key: "nightlife",
-    label: "Nightlife",
-    Icon: Wine,
-    blurb: "Bars, clubs, sports",
-    subTypes: [
-      { key: "sports_bar", label: "Sports Bars", Icon: Beer },
-      { key: "clubs", label: "Clubs", Icon: Music },
-    ],
-  },
-  {
-    key: "shopping",
-    label: "Shopping",
-    Icon: ShoppingBag,
-    blurb: "Boutiques & souvenirs",
-    subTypes: [
-      { key: "boutiques", label: "Local Boutiques", Icon: Store },
-      { key: "souvenirs", label: "Souvenirs", Icon: Gift },
-    ],
-  },
-  {
-    key: "real_estate",
-    label: "Real Estate",
-    Icon: Building2,
-    blurb: "Buy land, homes & more",
-    subTypes: [
-      { key: "homes_sale", label: "Homes for Sale", Icon: Home },
-      { key: "apartments_sale", label: "Apartments for Sale", Icon: Building },
-      { key: "land_sale", label: "Land for Sale", Icon: Trees },
-      { key: "commercial", label: "Commercial Property", Icon: Warehouse },
-      { key: "agents", label: "Real Estate Agents", Icon: Key },
-      { key: "lawyers", label: "Property Lawyers", Icon: Scale },
-      { key: "surveyors", label: "Surveyors", Icon: Ruler },
-    ],
-  },
-];
-
 const visitorEssentials = [
   { label: "SIM & Data", sub: "Safaricom, Airtel", Icon: Wifi },
   { label: "Forex", sub: "Best rates today", Icon: Banknote },
@@ -693,6 +545,12 @@ const GlobalStyles = () => (
 
 // ---------- SCREEN: DISCOVER ----------
 const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
+  const { cities, categories } = useReferenceData();
+  // KAR-6: the carousel reads the live top-ranked active businesses. Not
+  // city-filtered — the prototype shows the same cards in every city, and an
+  // empty rail would collapse the section; live-and-empty keeps the fallback.
+  const { items: liveTop } = useBusinesses({ fallback: recommended });
+  const topBusinesses = (liveTop.length ? liveTop : recommended).slice(0, 6);
   const placeholders = [
     "nails in Westlands",
     "airport transfer tonight",
@@ -827,7 +685,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
-          {recommended.map((b) => (
+          {topBusinesses.map((b) => (
             <button
               key={b.id}
               onClick={() => go("business", b)}
@@ -837,7 +695,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
                 <HeroImage variant={b.image} />
                 {b.badge && (
                   <div className="absolute top-2 left-2">
-                    <Badge kind="recommended">Karibu Recommended</Badge>
+                    <Badge kind={b.badge === "Verified" ? "verified" : "recommended"}>{b.badge}</Badge>
                   </div>
                 )}
               </div>
@@ -978,6 +836,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
 
 // ---------- SCREEN: SUB-CATEGORY PICKER ----------
 const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+  const { cities } = useReferenceData();
   const cat = payload;
   if (!cat) return null;
   const city = cities.find((c) => c.key === activeCity) || cities[0];
@@ -1084,14 +943,28 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 
 // ---------- SCREEN: CATEGORY ----------
 const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+  const { cities } = useReferenceData();
   const city = cities.find((c) => c.key === activeCity) || cities[0];
   const hoods = [`All ${city.label}`, ...city.hoods];
   const [activeHood, setActiveHood] = useState(hoods[0]);
   const [activeSort, setActiveSort] = useState("Recommended");
 
-  // Only Nairobi salons (Beauty → nails) has seeded businesses in the prototype
+  // Only Nairobi salons (Beauty → nails) was seeded in the prototype constants
   const isBeautyNails = payload?.key === "beauty" && (!payload?.subType || payload?.subType?.key === "nails");
-  const hasListings = activeCity === "nairobi" && isBeautyNails;
+
+  // KAR-6: live listings for this city/category/sub-type. Until the first live
+  // page resolves the prototype behaviour holds (salonsList for the one seeded
+  // case, "coming soon" otherwise); once live, the database decides — an empty
+  // result shows the existing "coming soon" state.
+  const { items: liveItems, live } = useBusinesses({
+    citySlug: activeCity,
+    categorySlug: payload?.key,
+    subTypeSlug: payload?.subType?.key,
+    fallback: activeCity === "nairobi" && isBeautyNails ? salonsList : [],
+  });
+  const hasListings = live
+    ? liveItems.length > 0
+    : activeCity === "nairobi" && isBeautyNails;
 
   const subTypeLabel = payload?.subType?.label;
   const screenTitle = subTypeLabel
@@ -1100,13 +973,15 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 
   const filtered = useMemo(() => {
     if (!hasListings) return [];
-    let list = [...salonsList];
+    let list = [...liveItems];
     if (!activeHood.startsWith("All ")) list = list.filter((s) => s.hood === activeHood);
-    if (activeSort === "Closest") list.sort((a, b) => a.distanceKm - b.distanceKm);
+    // Live rows may lack distanceKm/openNow (no user geolocation or hours data
+    // yet) — sort unknown distances last, and "Open now" only keeps known-open.
+    if (activeSort === "Closest") list.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
     if (activeSort === "Top rated") list.sort((a, b) => b.rating - a.rating);
     if (activeSort === "Open now") list = list.filter((s) => s.openNow);
     return list;
-  }, [activeHood, activeSort, hasListings]);
+  }, [liveItems, activeHood, activeSort, hasListings]);
 
   return (
     <div className="fade-in pb-4">
@@ -1170,7 +1045,9 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
         {filtered.map((s) => (
           <button
             key={s.id}
-            onClick={() => go("business", recommended.find((r) => r.id === s.id) || { ...recommended[0], ...s, image: "posh" })}
+            // Live rows carry a slug and are passed as-is (BusinessScreen
+            // fetches full detail by slug); constants keep the prototype merge.
+            onClick={() => go("business", s.slug ? s : recommended.find((r) => r.id === s.id) || { ...recommended[0], ...s, image: "posh" })}
             className="w-full flex gap-3 p-2.5 rounded-2xl border border-ink-10 bg-white text-left"
           >
             <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
@@ -1179,14 +1056,16 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h4 className="font-semibold text-sm text-ink leading-tight">{s.name}</h4>
-                {s.openNow ? (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-forest flex-shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-forest pulse-dot" />
-                    Open
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-stone-w flex-shrink-0">Closed</span>
-                )}
+                {/* Unknown open-state (live rows without hours data) shows neither */}
+                {s.openNow != null &&
+                  (s.openNow ? (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-forest flex-shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-forest pulse-dot" />
+                      Open
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-stone-w flex-shrink-0">Closed</span>
+                  ))}
               </div>
               <p className="text-xs text-stone-w mt-0.5">{s.tagline}</p>
               <div className="flex items-center gap-1 mt-1">
@@ -1195,8 +1074,13 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
                 <span className="text-xs text-stone-w">({s.reviews})</span>
                 <span className="text-xs text-stone-w">·</span>
                 <span className="text-xs text-stone-w">{s.hood}</span>
-                <span className="text-xs text-stone-w">·</span>
-                <span className="text-xs text-stone-w">{s.distanceKm} km</span>
+                {/* Distance needs user geolocation — hidden until it exists */}
+                {s.distanceKm != null && (
+                  <>
+                    <span className="text-xs text-stone-w">·</span>
+                    <span className="text-xs text-stone-w">{s.distanceKm} km</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-1.5 mt-1.5">
                 {s.badge === "Karibu Recommended" && <Badge kind="recommended">Recommended</Badge>}
@@ -1245,11 +1129,17 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const b = payload || recommended[0];
   const [saved, setSaved] = useState(false);
 
-  // Fall back to full data if the payload was a lightweight list item
-  const full = { ...recommended[0], ...b };
+  // KAR-7: live-sourced payloads carry a slug — fetch the full row + published
+  // reviews. Constant-sourced payloads have no slug; the hook stays inert and
+  // the prototype merge below behaves exactly as before.
+  const { business: liveBiz, reviews: liveReviews } = useBusinessDetail(b.slug);
 
-  // Combine existing seed reviews with new user-submitted ones (new first)
-  const allReviews = [...reviews, ...reviewsSample];
+  // Fall back to full data if the payload was a lightweight list item
+  const full = { ...recommended[0], ...b, ...(liveBiz || {}) };
+
+  // Combine existing seed reviews with new user-submitted ones (new first).
+  // Once the published set is live it replaces the sample constants.
+  const allReviews = [...reviews, ...(liveReviews ?? reviewsSample)];
 
   // Live-computed rating: folds user reviews into the stored aggregate
   const seedSum = full.rating * full.reviews;
@@ -1258,14 +1148,26 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const liveRating =
     totalCount > 0 ? (seedSum + addSum) / totalCount : full.rating;
 
-  // Rating distribution for visual richness
-  const distribution = [
-    { stars: 5, pct: 72 },
-    { stars: 4, pct: 21 },
-    { stars: 3, pct: 5 },
-    { stars: 2, pct: 1 },
-    { stars: 1, pct: 1 },
-  ];
+  // Rating distribution — computed from the live published reviews when we
+  // have them; the prototype's illustrative split otherwise.
+  const distribution = liveReviews
+    ? [5, 4, 3, 2, 1].map((stars) => ({
+        stars,
+        pct: liveReviews.length
+          ? Math.round(
+              (liveReviews.filter((r) => r.rating === stars).length /
+                liveReviews.length) *
+                100,
+            )
+          : 0,
+      }))
+    : [
+        { stars: 5, pct: 72 },
+        { stars: 4, pct: 21 },
+        { stars: 3, pct: 5 },
+        { stars: 2, pct: 1 },
+        { stars: 1, pct: 1 },
+      ];
 
   // Rank within hood/category — derived from rating position in seed list
   const sameHoodAndCategory = salonsList.filter(
@@ -1560,7 +1462,50 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       serviceUsed: service || null,
       recommendation: recoLabel,
     };
+    // Optimistic local update first — the on-screen UX ("live after
+    // moderation") is identical whether or not the server write happens.
     onSubmit(biz.id, newReview);
+
+    // KAR-8: persist through the submit-review edge function when possible.
+    // It requires a signed-in user (verify_jwt = true) and a live business
+    // (dbId). Until the app ships an auth flow, guest reviews stay local-only.
+    if (biz.dbId) {
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const session = sessionData?.session;
+          if (!session) {
+            console.warn(
+              "[Karibu] review kept local — sign in required to persist reviews.",
+            );
+            return;
+          }
+          const { error: fnError } = await supabase.functions.invoke(
+            "submit-review",
+            {
+              body: {
+                business_id: biz.dbId,
+                reviewer_name:
+                  session.user.user_metadata?.full_name ||
+                  session.user.email?.split("@")[0] ||
+                  "Karibu visitor",
+                reviewer_country: country.replace(/^\S*\s+/, ""), // drop the flag emoji
+                reviewer_type: visitType.toLowerCase(),
+                rating,
+                body: text.trim(),
+                service_used: service || null,
+                recommendation, // the key the function validates: yes | caveats | no
+              },
+            },
+          );
+          if (fnError) {
+            console.error("[Karibu] submit-review failed:", fnError.message);
+          }
+        } catch (e) {
+          console.error("[Karibu] submit-review failed:", e);
+        }
+      })();
+    }
   };
 
   return (
@@ -1979,6 +1924,7 @@ const BusinessSignupScreen = ({ back }) => {
 
 // ---------- SCREEN: CITY PICKER ----------
 const CityPickerScreen = ({ back, activeCity, onSelect }) => {
+  const { cities } = useReferenceData();
   return (
     <div className="fade-in">
       <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
@@ -2039,6 +1985,7 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
 
 // ---------- SCREEN: ASK KARIBU (AI search) ----------
 const AskKaribuScreen = ({ back, go, activeCity }) => {
+  const { cities } = useReferenceData();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -2053,38 +2000,6 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
     `Romantic dinner under KSh 5,000 per person`,
   ];
 
-  const systemPrompt = `You are Karibu, a warm, knowledgeable local guide helping visitors, tourists, and newcomers find trusted services in Kenya.
-
-Current city: ${cityLabel}.
-
-IMPORTANT: Only recommend businesses from this verified Karibu directory. If the user asks about something outside this list, acknowledge you don't have a verified match yet and suggest they browse the broader category.
-
-Karibu organizes services in 13 parent categories: Hotels & Housing (hotels, resorts, Airbnb, B&Bs, vacation homes, short/long-term rentals), Transportation (airport transfers, taxis, private taxis, Uber, Bolt, matatu & public transport), Money & Banking (forex, banks, ATMs), Hospital & Pharmacy (urgent care, ER, clinics, chemists), Safaris & Attractions, Health & Beauty (hair, nails, spa, massage, gym), Restaurants (by cuisine: steak, Chinese, Italian, seafood, nyama choma, Kenyan local, international), Cafés & Coffee, Laundry & Dry Cleaning, Groceries & Markets (supermarkets, butchery, farmer's market, bakery), Nightlife (sports bars, clubs), Shopping (boutiques, souvenirs), and Real Estate (homes for sale, apartments for sale, land for sale, commercial property, real estate agents, property lawyers, surveyors — primarily for expats and newcomers planning longer stays, not tourists).
-
-For Real Estate questions specifically: Kenya has a serious land-fraud problem and visitors asking about buying property MUST be told to use both a vetted property lawyer (for title verification and conveyancing) and a licensed surveyor (for boundary confirmation) before any purchase. Never let a question about "land for sale" pass without mentioning these safeguards. Recommend they search Karibu's "Property Lawyers" and "Surveyors" sub-categories before committing to any deal.
-
-Verified directory (currently seeded):
-- Posh Palace Salon (Westlands, Nairobi) — nails/braids/pedicure, KSh 1,500–6,000, Karibu Recommended, 4.8★
-- Ashleys (Lavington, Nairobi) — full-service salon, KSh 1,200–5,500, 4.6★
-- La Beauté (Kilimani, Nairobi) — Brazilian blowout/nails, KSh 2,000–7,000, 4.5★
-- Sayuri Nail Bar (Westlands, Nairobi) — nails only, KSh 2,500–4,500, 4.9★
-- The Talisman (Karen, Nairobi) — pan-Asian restaurant, KSh 2,500–5,000 pp, 4.7★
-- Mama Oliech's (Parklands, Nairobi) — fish/seafood, traditional Kenyan, 4.7★
-- Artcaffe Westgate (Westlands, Nairobi) — brunch/cafe/wifi, KSh 500–1,800, 4.4★
-- Connect Coffee Roasters (Lavington, Nairobi) — specialty coffee, 4.8★
-- Nairobi National Park Safari — day trip, wildlife, 4.9★
-
-When asked about categories without seeded businesses yet (e.g. hotels, supermarkets, hospitals), give honest, practical Kenya-specific recommendations from general local knowledge — naming well-known options like Java House for cafés, Carnivore for nyama choma, Naivas/Carrefour for supermarkets, Aga Khan/Nairobi Hospital for healthcare. Note that these are not yet "Karibu Recommended" but are well-known options. Encourage feedback if they end up using one.
-
-You also have access to the Karibu editorial guides library covering: Safety in Nairobi (what to avoid, neighbourhood safety, phone snatchings, ATM safety), Neighbourhoods & where to stay (Westlands, Karen, Kilimani, Lavington, Gigiri, CBD), Transport (Uber/Bolt vs matatus, traffic patterns, expressway, boda bodas), Money & M-Pesa (how to set up as a visitor, tipping, forex), Culture & Etiquette (greetings, tipping, photography), and Health (vaccines, malaria, water, hospitals). When the user asks about any of these topics, draw on this knowledge and briefly mention "there's a full guide on this in the Guides tab" at the end if relevant.
-
-Format your reply:
-- Keep it short (under 120 words)
-- Name 1-3 specific businesses with the neighborhood and one concrete reason each, OR give practical advice from the guides
-- If asking for clarifying info would help, ask ONE short question at the end
-- No markdown headers or bullet lists — write in natural prose like a helpful local friend
-- Use Swahili greetings sparingly ("Karibu" only in greeting, not repeatedly)`;
-
   const sendMessage = async (promptText) => {
     const userMsg = { role: "user", content: promptText };
     const nextMessages = [...messages, userMsg];
@@ -2094,23 +2009,25 @@ Format your reply:
     setError(null);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
+      // The Anthropic key never touches the browser. We call the ask-karibu
+      // edge function, which holds the Anthropic API key server-side, grounds
+      // the reply in the live verified directory, and returns the raw Anthropic
+      // Messages response — so the content parsing below is unchanged.
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "ask-karibu",
+        {
+          body: {
+            messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            city: activeCity,
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+      if (fnError) {
+        throw new Error(fnError.message || "Ask Karibu request failed");
       }
 
-      const data = await response.json();
-      const text = data.content
+      const text = data?.content
         ?.map((i) => (i.type === "text" ? i.text : ""))
         .filter(Boolean)
         .join("\n") || "I'm not sure how to help with that just yet.";
@@ -2521,6 +2438,7 @@ const MerchantDashboardScreen = ({ back }) => {
 
 // ---------- SCREEN: GUIDES HUB ----------
 const GuidesHubScreen = ({ go, activeCity }) => {
+  const { cities } = useReferenceData();
   const featured = guides.filter((g) => g.featured);
   const cityLabel = cities.find((c) => c.key === activeCity)?.label || "Nairobi";
 
