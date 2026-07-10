@@ -11,7 +11,9 @@ Built by Kigs Apex Solutions, Nairobi. Launch cities: Nairobi, Mombasa, Naivasha
 ## Where we are right now
 
 - The UI is still one ~3,200-line component, `src/KaribuApp.jsx` (14 screens), but its **data layer is migrated**: cities/categories via Context (KAR-5), listings via the keyset-paginated `useBusinesses` hook (KAR-6), business detail + published reviews by slug (KAR-7), review submission through `submit-review` when a session exists (KAR-8), and Ask Karibu through the `ask-karibu` proxy. The prototype constants remain as fallbacks — first paint is unchanged and the app still renders if Supabase is unreachable.
-- The backend is **scaffolded in-repo** (`supabase/`: 6 migrations, seed, 7 edge functions) and verified end-to-end against the local stack (`supabase start` + `db reset`). **No cloud project is provisioned yet** — `.env` points at the local stack; functions, secrets, and crons are not deployed anywhere real.
+- The backend is **scaffolded in-repo** (`supabase/`: 8 migrations, seed, 7 edge functions) and verified end-to-end against the local stack (`supabase start` + `db reset`).
+- **A cloud project exists**: `karibu` (`jwiptjcpczamewmyaost`), `eu-central-1`, free plan. Schema + RLS + seed are live and every frontend query is verified against it — see `SUPABASE_SETUP.md`. **Edge functions, secrets, and crons are still not deployed anywhere.** `.env` still points at the local stack.
+- **Cloud and local disagree about default privileges.** Locally, migrations run as `postgres` and the API roles get *no* grants; in the cloud they get *all* of them. `20260710160000_lock_down_api_role_grants.sql` revokes and re-grants explicitly so both converge. Never rely on a table's default grants — and remember RLS does not apply to materialized views.
 - **Persisted reviews need an auth flow.** `submit-review` requires a signed-in user; until sign-in ships, guest reviews stay local-only (optimistic UI, console warning).
 - **Current sprint:** Backend foundation — see `docs/SPRINT_01.md`. **Target:** a launch-ready backend (solo dev).
 
