@@ -96,6 +96,41 @@ running code disagree, **trust production** and update the doc.
 - [ ] Deployed anywhere real; secrets set; crons scheduled.
 - [ ] Confirm the model string against current Anthropic docs before go-live.
 
+### 🔴 Security blockers — must be fixed BEFORE any edge function is deployed
+
+Found by automated review on 2026-07-10 and confirmed by reading the code. **None is
+exploitable today**: no cloud Supabase project exists, so no function is reachable. Each
+becomes live the moment Phase 2 provisions a project and Phase 7 deploys. The CI deploy
+job is gated on `SUPABASE_PROJECT_REF` being set, so adding that secret is the trigger
+that arms all of this. Do not add it until these are closed.
+
+- [ ] **CRITICAL — `mpesa-callback` is an unauthenticated payment bypass.**
+      `supabase/config.toml:95` sets `verify_jwt = false` and the function does no origin
+      check, no shared secret, and no amount verification. On `ResultCode === 0` it
+      activates the subscription (`index.ts:65`) and promotes `businesses.tier`
+      (`index.ts:75`). Worse, `mpesa-stk-push` is *also* `verify_jwt = false`
+      (`config.toml:90`), so an attacker can mint a real `CheckoutRequestID`, never pay,
+      then POST a forged success callback for it and self-promote to "Karibu
+      Recommended". Fix: a shared-secret token on the `CallBackURL` compared in constant
+      time, plus cross-check `Amount` / `MpesaReceiptNumber` from `CallbackMetadata`
+      against the stored `amount_kes`. Consider an IP allowlist for Daraja's published
+      source IPs. Reject unauthenticated calls rather than returning `Accepted`.
+- [ ] **HIGH — `moderate-reviews` is prompt-injectable.** `index.ts:66` interpolates the
+      raw `${review.body}` into the classification prompt inside quotes. A review body can
+      close the quote and instruct Claude to return all-clean, publishing itself. Fix:
+      wrap untrusted fields in delimited tags the system prompt declares to be data, use
+      structured tool output instead of parsing the first JSON blob, and gate publication
+      behind an independent heuristic (URL/keyword/length) so no single model response can
+      promote a review.
+- [ ] **MEDIUM — `submit-review` rate limit is spoofable.** `index.ts:84` takes the
+      **first** `x-forwarded-for` hop, which the client controls, so the per-IP limit is
+      bypassed by sending a header. Fix: take the **last** hop (appended by the trusted
+      proxy) and additionally rate-limit on the authenticated `reviewerId`, which the
+      function already has.
+- [ ] **Review `verify_jwt = false` on the cron functions.** `moderate-reviews` and
+      `calculate-rankings` are publicly invokable. Low impact (they only run work early),
+      but they should be reachable only by the scheduler.
+
 ## Phase 5 — Auth ⛔ blocker
 
 - [ ] Supabase Auth. **`submit-review` requires a signed-in user**, so guest reviews stay
@@ -109,4 +144,21 @@ running code disagree, **trust production** and update the doc.
 ## Phase 7 — Deploy & operations
 
 - [x] `.github/workflows/deploy.yml` exists (lint → build, then deploy functions on `main`).
+- [x] **Repo root flattened so CI can actually see it.** Everything lived under
+      `karibu-main/`, and GitHub Actions only reads `.github/workflows/` at the
+      repository root — so the workflow was invisible and `gh run list` returned zero
+      runs for the whole repo's history. Moved all 114 tracked files up one level
+      (pure renames, 100% similarity, no content change).
+- [x] **`pull_request` trigger unfiltered.** `branches: [main]` matches the PR's *base*,
+      so a PR into any phase branch was never checked. Deviates from guide section 10,
+      which specifies `pull_request: branches: [main]` — the guide assumes PRs only ever
+      target `main`. `workflow_dispatch` added so the pipeline can be run by hand.
+- [x] **`deploy-supabase-functions` gated on configuration.** It would otherwise fail on
+      the first push to `main`, since `supabase link --project-ref` gets an empty ref with
+      no `SUPABASE_PROJECT_REF` secret. A `check-config` job resolves the secrets (the
+      `secrets` context is unavailable in a job-level `if:`) and the deploy job skips
+      unless both `SUPABASE_PROJECT_REF` and `SUPABASE_ACCESS_TOKEN` are set. It
+      auto-enables the moment they are. **Setting those two secrets arms the deploy —
+      close the security blockers above first.**
 - [ ] Frontend host, `VITE_*` env vars, edge-function secrets, Sentry.
+- [ ] Point the Vercel/Netlify **root directory** at the repo root, not `karibu-main/`.
