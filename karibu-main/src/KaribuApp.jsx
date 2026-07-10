@@ -509,7 +509,9 @@ const GlobalStyles = () => (
     .border-clay { border-color: #B8472E; }
     .border-ochre { border-color: #D4A341; }
 
-    .phone-shadow { box-shadow: 0 40px 80px -20px rgba(40,25,15,0.35), 0 20px 40px -10px rgba(40,25,15,0.20); }
+    /* The app owns the viewport; screens scroll inside it, the page never does.
+       100dvh tracks the mobile URL bar; 100vh is the fallback for older browsers. */
+    .app-viewport { height: 100vh; height: 100dvh; overflow: hidden; }
 
     .kitenge-bg {
       background-image:
@@ -2895,7 +2897,10 @@ const BottomNav = ({ active, go }) => {
     { key: "profile", label: "Profile", Icon: User },
   ];
   return (
-    <div className="border-t border-ink-10 bg-ivory grid grid-cols-5">
+    <div
+      className="border-t border-ink-10 bg-ivory grid grid-cols-5 flex-shrink-0"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {items.map(({ key, label, Icon }) => (
         <button
           key={key}
@@ -2922,12 +2927,10 @@ export default function Karibu() {
   const [reviewsByBusiness, setReviewsByBusiness] = useState({});
   const [justPostedFor, setJustPostedFor] = useState(null);
   const [activeCity, setActiveCity] = useState("nairobi");
-  const [merchantMode, setMerchantMode] = useState(false);
   const current = stack[stack.length - 1];
 
   const go = (screen, payload = null) => {
     if (screen === "merchant_dashboard") {
-      setMerchantMode(true);
       setStack([{ screen: "merchant_dashboard", payload: null }]);
       return;
     }
@@ -2937,7 +2940,6 @@ export default function Karibu() {
     setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
   };
   const exitMerchant = () => {
-    setMerchantMode(false);
     setStack([{ screen: "discover", payload: null }]);
   };
   const goTab = (key) => {
@@ -3045,82 +3047,28 @@ export default function Karibu() {
   return (
     <>
       <GlobalStyles />
-      <div className="min-h-screen font-sans-d text-ink kitenge-bg" style={{ backgroundColor: "#EEE5D3" }}>
-        <div className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-start justify-center">
-          {/* Left copy (desktop only) */}
-          <div className="hidden md:block md:w-80 md:pt-10 md:sticky md:top-12">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-full bg-clay flex items-center justify-center">
-                <span className="font-serif-d text-xl" style={{ color: "#F7F1E8", lineHeight: 1 }}>K</span>
-              </div>
-              <span className="font-serif-d text-2xl text-ink">Karibu</span>
-            </div>
-            <h1 className="font-serif-d text-5xl leading-none text-ink mb-3">
-              A local guide,<br />
-              <span className="italic text-clay">for newcomers.</span>
-            </h1>
-            <p className="text-sm text-ink leading-relaxed mb-4" style={{ maxWidth: "28ch" }}>
-              Services discovery for tourists, expats, and anyone new to Kenya. Find the right salon, the right driver, the right nyama choma — without asking five strangers first.
-            </p>
-            <div className="space-y-2 text-sm text-ink">
-              <div className="flex items-start gap-2">
-                <Check size={15} className="text-clay mt-0.5 flex-shrink-0" />
-                <span>12 service categories across Nairobi & Mombasa</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check size={15} className="text-clay mt-0.5 flex-shrink-0" />
-                <span>M-Pesa, WhatsApp, and multilingual signals</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Check size={15} className="text-clay mt-0.5 flex-shrink-0" />
-                <span>Tiered subscription model for businesses</span>
-              </div>
-            </div>
-            <div className="mt-5 pt-5 border-t border-ink-10 text-xs text-stone-w">
-              Tap through the prototype → home, category listing, business detail, and the "For Business" pricing flow are all interactive.
-            </div>
+      <div
+        className="app-viewport font-sans-d text-ink kitenge-bg"
+        style={{
+          backgroundColor: "#EEE5D3",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
+        {/* Full-bleed on mobile; centred in a mobile-width column on desktop.
+            The definite height here is what lets the screens that use h-full
+            (AskKaribuScreen, PlaceholderScreen) resolve against the flex row. */}
+        <div
+          className="mx-auto w-full max-w-sm h-full flex flex-col overflow-hidden"
+          style={{ backgroundColor: "#F7F1E8", paddingTop: "env(safe-area-inset-top)" }}
+        >
+          {/* Screen content (scrollable) */}
+          <div className="flex-1 min-h-0 overflow-y-auto hide-scroll">
+            {renderScreen()}
           </div>
 
-          {/* Phone frame */}
-          <div className="w-full max-w-sm mx-auto md:mx-0">
-            <div
-              className="relative rounded-[2.5rem] border-4 border-ink phone-shadow overflow-hidden"
-              style={{ backgroundColor: "#F7F1E8", height: "820px" }}
-            >
-              {/* Status bar */}
-              <div className="px-6 pt-2.5 pb-1 flex items-center justify-between text-[11px] font-semibold text-ink">
-                <span>9:41</span>
-                <div className="flex items-center gap-1">
-                  <span>●●●</span>
-                  <span>📶</span>
-                  <span>🔋</span>
-                </div>
-              </div>
-
-              {/* Notch */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-1.5 w-20 h-5 bg-ink rounded-b-2xl" />
-
-              {/* Screen content (scrollable) */}
-              <div
-                className="overflow-y-auto hide-scroll"
-                style={{ height: hideBottomNav ? "calc(820px - 36px)" : "calc(820px - 88px)" }}
-              >
-                {renderScreen()}
-              </div>
-
-              {/* Bottom nav (hidden for full-screen flows) */}
-              {!hideBottomNav && (
-                <div className="absolute bottom-0 left-0 right-0">
-                  <BottomNav active={activeTab} go={goTab} />
-                </div>
-              )}
-            </div>
-            <div className="text-center mt-4 text-[11px] text-stone-w">
-              {merchantMode
-                ? "Merchant mode · Tap back to return to the traveller app."
-                : "Tap any category, card, or CTA. Try the city picker (top-right), Ask Karibu, or open the merchant dashboard."}
-            </div>
-          </div>
+          {/* Bottom nav (hidden for full-screen flows) */}
+          {!hideBottomNav && <BottomNav active={activeTab} go={goTab} />}
         </div>
       </div>
     </>
