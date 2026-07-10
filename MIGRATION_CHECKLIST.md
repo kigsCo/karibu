@@ -109,4 +109,20 @@ running code disagree, **trust production** and update the doc.
 ## Phase 7 — Deploy & operations
 
 - [x] `.github/workflows/deploy.yml` exists (lint → build, then deploy functions on `main`).
+- [x] **Repo root flattened so CI can actually see it.** Everything lived under
+      `karibu-main/`, and GitHub Actions only reads `.github/workflows/` at the
+      repository root — so the workflow was invisible and `gh run list` returned zero
+      runs for the whole repo's history. Moved all 114 tracked files up one level
+      (pure renames, 100% similarity, no content change).
+- [x] **`pull_request` trigger unfiltered.** `branches: [main]` matches the PR's *base*,
+      so a PR into any phase branch was never checked. Deviates from guide section 10,
+      which specifies `pull_request: branches: [main]` — the guide assumes PRs only ever
+      target `main`. `workflow_dispatch` added so the pipeline can be run by hand.
+- [ ] **The `deploy-supabase-functions` job will fail on the first push to `main`.** It
+      runs `supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}`, and neither
+      that secret nor `SUPABASE_ACCESS_TOKEN` exists yet (no cloud project — see Phase 2).
+      It is gated to `push` on `main`, so it never runs on a PR and cannot redden this
+      stack. Left failing-loud on purpose rather than silently skipped; decide in Phase 2
+      whether to gate it on the secret being present.
 - [ ] Frontend host, `VITE_*` env vars, edge-function secrets, Sentry.
+- [ ] Point the Vercel/Netlify **root directory** at the repo root, not `karibu-main/`.
