@@ -15,6 +15,8 @@ body {
   background-color: #EEE5D3;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Named utilities that mirror the original prototype */
@@ -43,10 +45,12 @@ body {
 .border-clay   { border-color: #B8472E; }
 .border-ochre  { border-color: #D4A341; }
 
-/* Phone frame shadow for the desktop preview */
-.phone-shadow {
-  box-shadow: 0 40px 80px -20px rgba(40,25,15,0.35),
-              0 20px 40px -10px rgba(40,25,15,0.20);
+/* The app owns the viewport; screens scroll inside it, the page never does.
+   100dvh tracks the mobile URL bar; 100vh is the fallback for older browsers. */
+.app-viewport {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .kitenge-bg {

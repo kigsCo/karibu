@@ -3,8 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/karibu-icon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to a real
+         value on notched devices; the app column pads itself with those insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#F7F1E8" />
+
+    <link rel="manifest" href="/manifest.webmanifest" type="application/manifest+json" />
+    <!-- iOS ignores the manifest icons and its display mode; these drive both. -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Karibu" />
     <meta name="description" content="Karibu — a services-discovery app for tourists and newcomers to Kenya. Find trusted salons, restaurants, and services across Nairobi, Mombasa, and beyond." />
     <meta property="og:title" content="Karibu — A local guide, for newcomers" />
     <meta property="og:description" content="Services discovery for visitors to Kenya. Verified businesses, editorial guides, and AI recommendations." />
