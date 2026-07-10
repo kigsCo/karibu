@@ -91,7 +91,12 @@ verify_jwt = false
 verify_jwt = false
 
 # Public WEBHOOK: Safaricom Daraja posts the payment result here. It cannot send
-# a Supabase JWT, so verify_jwt MUST be off; the handler validates the payload.
+# a Supabase JWT, so verify_jwt MUST be off. Authentication is instead the shared
+# secret MPESA_CALLBACK_SECRET, which mpesa-stk-push bakes into the CallBackURL
+# it registers and the handler compares in constant time. The handler also
+# verifies the paid Amount against subscriptions.amount_kes and refuses to settle
+# a subscription twice. Without the secret set, the handler returns 503 and
+# changes nothing — it will not guess whether a caller is Safaricom.
 [functions.mpesa-callback]
 verify_jwt = false
 

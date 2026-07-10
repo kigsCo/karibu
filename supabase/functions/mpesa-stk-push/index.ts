@@ -9,11 +9,12 @@
 // used below — swap base URL + shortcode for production credentials at go-live.
 //
 // Env (Supabase secrets): MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET,
-//   MPESA_PASSKEY, and optionally MPESA_CALLBACK_URL.
+//   MPESA_PASSKEY, MPESA_CALLBACK_SECRET, and optionally MPESA_CALLBACK_URL.
 
 import { handleOptions } from "../_shared/cors.ts";
 import { createServiceClient } from "../_shared/client.ts";
 import { errorResponse, json } from "../_shared/response.ts";
+import { withCallbackToken } from "../_shared/security.ts";
 
 // Daraja SANDBOX. Production base is https://api.safaricom.co.ke
 const DARAJA_BASE = "https://sandbox.safaricom.co.ke";
@@ -52,7 +53,11 @@ Deno.serve(async (req: Request) => {
   const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY");
   const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET");
   const passkey = Deno.env.get("MPESA_PASSKEY");
-  if (!consumerKey || !consumerSecret || !passkey) {
+  // mpesa-callback authenticates itself with this secret. Without it here, the
+  // CallBackURL we register would carry no token and every real payment result
+  // would be rejected — so refuse to start a payment we cannot settle.
+  const callbackSecret = Deno.env.get("MPESA_CALLBACK_SECRET");
+  if (!consumerKey || !consumerSecret || !passkey || !callbackSecret) {
     return errorResponse("Server misconfigured (M-Pesa secrets missing)", 500);
   }
 
@@ -74,8 +79,11 @@ Deno.serve(async (req: Request) => {
   //    Timestamp: YYYYMMDDHHmmss. Password: base64(shortcode + passkey + timestamp).
   const timestamp = darajaTimestamp(new Date());
   const password = btoa(`${SANDBOX_SHORTCODE}${passkey}${timestamp}`);
-  const callbackUrl = Deno.env.get("MPESA_CALLBACK_URL") ??
+  // The shared secret rides on the URL: Daraja lets us register any CallBackURL
+  // but never lets us set a request header on the callback it sends back.
+  const callbackBase = Deno.env.get("MPESA_CALLBACK_URL") ??
     `${Deno.env.get("SUPABASE_URL")}/functions/v1/mpesa-callback`;
+  const callbackUrl = withCallbackToken(callbackBase, callbackSecret);
 
   const stkRes = await fetch(`${DARAJA_BASE}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
