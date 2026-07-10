@@ -29,7 +29,7 @@ inactivity** — fine before launch, not after. Both are tracked in
 
 ## What is deployed
 
-- All 8 migrations in `supabase/migrations/`, applied in filename order.
+- All 9 migrations in `supabase/migrations/`, applied in filename order.
 - `supabase/seed.sql`: 5 cities, 13 categories, 47 sub-types, 10 active
   businesses, 6 published reviews, 2 published guides.
 - RLS enabled on all 10 app tables.
@@ -106,6 +106,7 @@ SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version
 -- 20260622233557 add_cities_sort_order
 -- 20260710150000 harden_payments_and_review_abuse
 -- 20260710160000 lock_down_api_role_grants
+-- 20260710170000 move_postgis_out_of_public
 ```
 
 ## The grant model differs local vs cloud — and that mattered
@@ -165,12 +166,30 @@ Dashboard → Advisors → Security, or `get_advisors` over MCP.
 
 Tracked in `MIGRATION_CHECKLIST.md`. The short version:
 
-- **`spatial_ref_sys` is writable by `anon`** (PostGIS). It has no RLS, is served
-  by PostgREST, and is owned by `supabase_admin`, so no migration of ours can
-  revoke it. The fix is to reinstall PostGIS into the unexposed `extensions`
-  schema. `businesses.location` is unused and NULL everywhere, so this is cheap
-  now and expensive after launch.
-- `ranking_score` is `0` on every row until `calculate-rankings` runs, so
-  Discover's ordering is currently arbitrary.
+- `ranking_score` is `0` on every row until `calculate-rankings` runs, so Discover's
+  ordering is currently arbitrary (it falls through to the `id` tiebreaker).
 - The project must be transferred to a Kigs Apex organization and upgraded off
-  the free plan before go-live.
+  the free plan before go-live. A free project pauses after 7 days idle.
+- `.mcp.json` still carries `--project-ref=YOUR_PROJECT_REF`.
+
+## PostGIS lives in `extensions`, not `public`
+
+`20260601000001_core_schema.sql` ran `CREATE EXTENSION postgis;` with no schema, so
+PostGIS installed into `public` — and so did `spatial_ref_sys`, which has no RLS,
+cannot be given any (we do not own it), is served by PostgREST, and had
+`INSERT`/`DELETE` granted to `anon` by the cloud's default privileges. The anon key
+is public by design, so that was a writable endpoint for anyone.
+
+`20260710170000_move_postgis_out_of_public.sql` moves PostGIS and `pg_trgm` into the
+unexposed `extensions` schema. PostGIS does not support `ALTER EXTENSION ... SET
+SCHEMA`, so it is dropped and recreated; `businesses.location` was read by no code
+and NULL on every row, so nothing was lost. The three PostGIS endpoints now return
+`404 / PGRST205`.
+
+**Consequence for future migrations:** the `geography` type is no longer on the
+default `search_path`. Write `extensions.geography(Point, 4326)` and
+`extensions.gin_trgm_ops` explicitly, as that migration does.
+
+The Supabase security advisor is now clean — zero ERROR, zero WARN. The two
+remaining INFO items (`ai_conversations`, `rate_limits`: RLS on, no policies) are
+intentional; those tables are service-role only.

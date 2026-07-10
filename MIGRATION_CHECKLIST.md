@@ -106,16 +106,25 @@ RLS was still filtering the app tables — but that made RLS the only layer, and
       the API roles, re-grant the intended model, pin `search_path` on all 7 functions.
       Applied to cloud **and** local. Verified: the matviews now return `401 / 42501` to
       anon, `anon` has no write privilege on any app table, and every app read still works.
-- [ ] **`spatial_ref_sys` is INSERT/DELETE-able by `anon`.** PostGIS's own table: no RLS,
+- [x] **`spatial_ref_sys` was INSERT/DELETE-able by `anon`.** PostGIS's own table: no RLS,
       served by PostgREST, owned by `supabase_admin`. Cloud `postgres` is neither a
-      superuser nor a member of that role, so **no migration of ours can revoke it or
-      enable RLS**. `has_table_privilege('anon','public.spatial_ref_sys','DELETE')` → `true`.
-      Same root cause as the `extension_in_public` and `st_estimatedextent SECURITY DEFINER`
-      advisor warnings. The fix is to reinstall PostGIS into the unexposed `extensions`
-      schema (PostGIS does not support `ALTER EXTENSION … SET SCHEMA`, so it must be
-      dropped and recreated), and move `pg_trgm` alongside it. **`businesses.location` is
-      unused by any code and NULL on every row, so this is nearly free today and expensive
-      after launch.**
+      superuser nor a member of that role, so no migration could revoke it or enable RLS —
+      the `REVOKE` statements in an earlier draft were silent no-ops.
+      **Fixed** by `20260710170000_move_postgis_out_of_public.sql`: PostGIS and `pg_trgm`
+      now live in the unexposed `extensions` schema. PostGIS does not support
+      `ALTER EXTENSION … SET SCHEMA`, so it was dropped and recreated; `businesses.location`
+      was read by no code and NULL on every row, so nothing was lost. Verified: the three
+      PostGIS endpoints return `404 / PGRST205` (PostgREST no longer knows they exist),
+      every app read still returns `200`, and a fresh `supabase db reset` reproduces the
+      end state. This also cleared the `extension_in_public` and
+      `st_estimatedextent SECURITY DEFINER` warnings.
+      **Note for future migrations:** the `geography` type now lives in `extensions` and is
+      not on the default `search_path` — write `extensions.geography(...)` and
+      `extensions.gin_trgm_ops`.
+
+**Supabase security advisor is now clean**: zero ERROR, zero WARN. The two remaining INFO
+items (`ai_conversations` and `rate_limits` have RLS on with no policies) are intentional —
+those tables are service-role only.
 
 ### Phase 2 follow-ups (not blockers for Phase 3/4)
 
