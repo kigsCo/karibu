@@ -29,9 +29,9 @@ inactivity** — fine before launch, not after. Both are tracked in
 
 ## What is deployed
 
-- All 9 migrations in `supabase/migrations/`, applied in filename order.
+- All 10 migrations in `supabase/migrations/`, applied in filename order.
 - `supabase/seed.sql`: 5 cities, 13 categories, 47 sub-types, 10 active
-  businesses, 6 published reviews, 2 published guides.
+  businesses, 6 published reviews, 6 published guides.
 - RLS enabled on all 10 app tables.
 
 Not deployed: **no edge functions, no cron schedules, no secrets.** Those are
@@ -54,6 +54,8 @@ Everything else is a Supabase **edge-function secret**
 | Secret | Used by |
 |---|---|
 | `ANTHROPIC_API_KEY` | `ask-karibu`, `moderate-reviews` |
+| `INTERNAL_FUNCTION_SECRET` | `moderate-reviews`, `calculate-rankings`, `send-onboarding-email` — **required**, `openssl rand -hex 32` |
+| `MPESA_ENABLED` | `mpesa-stk-push`. Set to the exact string `true` to accept payments. Anything else, including unset, means the function returns 503 and does nothing. |
 | `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY` | `mpesa-stk-push` |
 | `MPESA_CALLBACK_SECRET` | `mpesa-stk-push`, `mpesa-callback` — **required**, `openssl rand -hex 32` |
 | `MPESA_CALLBACK_URL` | optional callback base URL override |
@@ -62,6 +64,86 @@ Everything else is a Supabase **edge-function secret**
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are injected
 into edge functions by the platform. Do not set them by hand.
+
+### Why `INTERNAL_FUNCTION_SECRET` exists, and why `verify_jwt` is not it
+
+Three functions must only ever be called by our own backend: two crons that
+rewrite `reviews` and `ranking_score` with the service role and spend Anthropic
+tokens, and one that sends mail from our verified domain.
+
+The obvious lever is `verify_jwt = true` in `config.toml`. It is the wrong lever.
+**The anon key is a valid JWT, and it ships in the browser bundle by design.**
+Turning `verify_jwt` on would authenticate "some Supabase client" — which is
+every visitor — not "our backend". So those three functions keep `verify_jwt`
+off and compare an `x-karibu-internal-secret` header against
+`INTERNAL_FUNCTION_SECRET` in constant time instead
+(`supabase/functions/_shared/internal-auth.ts`).
+
+They **fail closed**: with the secret unset they return 503 and do nothing. An
+unconfigured deploy is a visibly broken cron job, never an open endpoint.
+
+## Scheduling the cron functions
+
+`moderate-reviews` runs hourly, `calculate-rankings` nightly at 03:00 EAT. Both
+are scheduled with `pg_cron` + `pg_net`, which means the schedule lives in the
+database rather than in this repo.
+
+**Run this once in the SQL editor. Do not put it in a migration** — migrations
+are committed to git, and both the shared secret and the service-role key would
+go with them.
+
+```sql
+create extension if not exists pg_cron with schema extensions;
+create extension if not exists pg_net  with schema extensions;
+
+-- Encrypted at rest, and readable only by postgres.
+select vault.create_secret(
+  '<the same value as the INTERNAL_FUNCTION_SECRET edge-function secret>',
+  'internal_function_secret',
+  'Shared secret for backend-only edge functions'
+);
+
+select cron.schedule('moderate-reviews-hourly', '0 * * * *', $job$
+  select net.http_post(
+    url     := 'https://jwiptjcpczamewmyaost.supabase.co/functions/v1/moderate-reviews',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-karibu-internal-secret',
+        (select decrypted_secret from vault.decrypted_secrets
+          where name = 'internal_function_secret')
+    ),
+    body    := '{}'::jsonb,
+    timeout_milliseconds := 55000
+  );
+$job$);
+
+-- 00:00 UTC == 03:00 Africa/Nairobi.
+select cron.schedule('calculate-rankings-nightly', '0 0 * * *', $job$
+  select net.http_post(
+    url     := 'https://jwiptjcpczamewmyaost.supabase.co/functions/v1/calculate-rankings',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-karibu-internal-secret',
+        (select decrypted_secret from vault.decrypted_secrets
+          where name = 'internal_function_secret')
+    ),
+    body    := '{}'::jsonb,
+    timeout_milliseconds := 55000
+  );
+$job$);
+```
+
+Check on them, and take them away again:
+
+```sql
+select jobid, jobname, schedule, active from cron.job;
+select * from cron.job_run_details order by start_time desc limit 10;
+select cron.unschedule('moderate-reviews-hourly');
+```
+
+If a job's `status` is `succeeded` but nothing changed in the database, read the
+edge function's logs: a 401 there means the Vault secret and the edge-function
+secret have drifted apart. Rotating one means rotating both.
 
 ## Reproducing this on a fresh project
 
@@ -107,6 +189,7 @@ SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version
 -- 20260710150000 harden_payments_and_review_abuse
 -- 20260710160000 lock_down_api_role_grants
 -- 20260710170000 move_postgis_out_of_public
+-- 20260710180000 add_guides_hero_variant
 ```
 
 ## The grant model differs local vs cloud — and that mattered
