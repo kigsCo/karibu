@@ -119,7 +119,11 @@ Deno.test("ask-karibu grounds the prompt in the directory and uses claude-sonnet
   await import("./index.ts");
 
   (Deno as any).serve = realServe;
-  assert(handler, "handler was not registered via Deno.serve");
+  // The assignment above happens inside a closure, which TypeScript's control
+  // flow analysis cannot see — without this cast it narrows `handler` to `null`
+  // and every use below becomes a type error.
+  const registered = handler as ((req: Request) => Response | Promise<Response>) | null;
+  assert(registered, "handler was not registered via Deno.serve");
 
   const req = new Request("http://localhost/ask-karibu", {
     method: "POST",
@@ -131,18 +135,20 @@ Deno.test("ask-karibu grounds the prompt in the directory and uses claude-sonnet
     }),
   });
 
-  const res = await handler!(req);
+  const res = await registered(req);
   assertEquals(res.status, 200);
 
   // --- Assertions on the Anthropic request --------------------------------
-  assert(capturedAnthropicBody, "no Anthropic request captured");
+  // Same closure-assignment problem as `handler` above; cast before narrowing.
+  const sent = capturedAnthropicBody as Record<string, unknown> | null;
+  assert(sent, "no Anthropic request captured");
   assertEquals(
-    capturedAnthropicBody!.model,
+    sent.model,
     "claude-sonnet-4-6",
     "must call the exact model claude-sonnet-4-6",
   );
 
-  const system = String(capturedAnthropicBody!.system ?? "");
+  const system = String(sent.system ?? "");
   assert(
     system.includes("verified directory"),
     "system prompt should describe the verified directory",

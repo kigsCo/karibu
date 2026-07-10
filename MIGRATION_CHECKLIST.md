@@ -98,38 +98,54 @@ running code disagree, **trust production** and update the doc.
 
 ### 🔴 Security blockers — must be fixed BEFORE any edge function is deployed
 
-Found by automated review on 2026-07-10 and confirmed by reading the code. **None is
-exploitable today**: no cloud Supabase project exists, so no function is reachable. Each
-becomes live the moment Phase 2 provisions a project and Phase 7 deploys. The CI deploy
-job is gated on `SUPABASE_PROJECT_REF` being set, so adding that secret is the trigger
-that arms all of this. Do not add it until these are closed.
+Found by automated review on 2026-07-10 and confirmed by reading the code. **None was
+exploitable**: no cloud Supabase project exists, so no function is reachable. Each becomes
+live the moment Phase 2 provisions a project and Phase 7 deploys. The CI deploy job is
+gated on `SUPABASE_PROJECT_REF` being set, so adding that secret is the trigger that arms
+all of this. Do not add it until every box below is ticked.
 
-- [ ] **CRITICAL — `mpesa-callback` is an unauthenticated payment bypass.**
-      `supabase/config.toml:95` sets `verify_jwt = false` and the function does no origin
-      check, no shared secret, and no amount verification. On `ResultCode === 0` it
-      activates the subscription (`index.ts:65`) and promotes `businesses.tier`
-      (`index.ts:75`). Worse, `mpesa-stk-push` is *also* `verify_jwt = false`
-      (`config.toml:90`), so an attacker can mint a real `CheckoutRequestID`, never pay,
-      then POST a forged success callback for it and self-promote to "Karibu
-      Recommended". Fix: a shared-secret token on the `CallBackURL` compared in constant
-      time, plus cross-check `Amount` / `MpesaReceiptNumber` from `CallbackMetadata`
-      against the stored `amount_kes`. Consider an IP allowlist for Daraja's published
-      source IPs. Reject unauthenticated calls rather than returning `Accepted`.
-- [ ] **HIGH — `moderate-reviews` is prompt-injectable.** `index.ts:66` interpolates the
-      raw `${review.body}` into the classification prompt inside quotes. A review body can
-      close the quote and instruct Claude to return all-clean, publishing itself. Fix:
-      wrap untrusted fields in delimited tags the system prompt declares to be data, use
-      structured tool output instead of parsing the first JSON blob, and gate publication
-      behind an independent heuristic (URL/keyword/length) so no single model response can
-      promote a review.
-- [ ] **MEDIUM — `submit-review` rate limit is spoofable.** `index.ts:84` takes the
-      **first** `x-forwarded-for` hop, which the client controls, so the per-IP limit is
-      bypassed by sending a header. Fix: take the **last** hop (appended by the trusted
-      proxy) and additionally rate-limit on the authenticated `reviewerId`, which the
-      function already has.
+The three named findings were fixed on 2026-07-10. Their regression tests live beside the
+functions and fail against the pre-fix handlers:
+`deno test --allow-env --allow-net supabase/functions/`.
+
+- [x] **CRITICAL — `mpesa-callback` was an unauthenticated payment bypass.**
+      `verify_jwt = false` has to stay (Safaricom cannot send a Supabase JWT), so
+      authentication is now a shared secret: `mpesa-stk-push` bakes `MPESA_CALLBACK_SECRET`
+      into the `CallBackURL` it registers, and the handler compares it in constant time.
+      It also cross-checks the paid `Amount` against `subscriptions.amount_kes`, records
+      the `MpesaReceiptNumber` (now `UNIQUE`, a second replay guard), and refuses to settle
+      a subscription that is not `pending_payment`. An unauthenticated caller gets `401`
+      and never reaches the database; with no secret configured the handler fails closed
+      with `503` rather than guessing whether a caller is Safaricom.
+- [x] **HIGH — `moderate-reviews` was prompt-injectable.** The review body is wrapped in a
+      `<review_body>` tag the system prompt declares to be data, the tag is stripped from
+      the body itself, and the model must answer through a **forced tool call** — the
+      free-text JSON scraping that let a body supply its own verdict is gone. An
+      independent `publishGate()` runs in code **before** the model sees the body and
+      forces `flagged` on URLs, contact details, over-length, and injection markers, so no
+      single model response can promote a review.
+- [x] **MEDIUM — `submit-review` rate limit was spoofable.** Now takes the **last**
+      `x-forwarded-for` hop (the one Supabase's edge appends, which a client cannot forge)
+      and adds two limits bound to the authenticated `auth.uid()`: 3 reviews per user per
+      24h, and 1 review per business per 30 days. Backed by a new composite index.
+- [ ] **Set `MPESA_CALLBACK_SECRET`** (`openssl rand -hex 32`) as a Supabase edge-function
+      secret alongside the M-Pesa credentials. Both `mpesa-stk-push` and `mpesa-callback`
+      refuse to run without it, by design.
+- [ ] **`mpesa-stk-push` is still publicly invokable** (`verify_jwt = false`). The payment
+      bypass is closed, so this can no longer buy a free tier — but anyone can still make
+      Karibu send STK prompts to arbitrary phone numbers, which is a harassment and
+      Daraja-cost vector. Before go-live: require auth, or rate-limit per IP and per
+      `business_id`, and verify the caller owns the business.
 - [ ] **Review `verify_jwt = false` on the cron functions.** `moderate-reviews` and
       `calculate-rankings` are publicly invokable. Low impact (they only run work early),
       but they should be reachable only by the scheduler.
+- [ ] **Residual prompt-injection risk in `moderate-reviews`.** The gate and the forced
+      tool call mean a review cannot publish *itself*. A body that slips past the gate
+      could still argue the model into a wrong verdict on the five axes — the blast radius
+      is one wrongly-published review, not arbitrary output. Revisit if abuse appears.
+- [ ] **Confirm the Anthropic model string before go-live.** `ask-karibu` and
+      `moderate-reviews` both pin `claude-sonnet-4-6`, which is current and valid. Newer
+      Sonnet models exist; changing it is a deliberate decision, not a security fix.
 
 ## Phase 5 — Auth ⛔ blocker
 

@@ -22,6 +22,21 @@ jobs:
       - run: npm run build
       # - run: npm run test:unit   # add when you have tests
 
+  # The edge functions are Deno, so `npm run lint` and `npm run build` never see
+  # them (eslint ignores supabase/functions/**). Without this job the security
+  # regression tests for mpesa-callback would sit in the repo and never run.
+  test-edge-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check the edge functions
+        run: deno check supabase/functions/_shared/*.ts supabase/functions/*/index.ts
+      - name: Run the edge-function tests
+        run: deno test --allow-env --allow-net supabase/functions/
+
   # The `secrets` context is not available in a job-level `if:`, so resolve it in a
   # step and let the deploy job gate on the output. Until a cloud Supabase project
   # exists, deploying is impossible — `supabase link` would fail on an empty ref.
@@ -42,8 +57,9 @@ jobs:
             echo "supabase_configured=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Never deploy an edge function whose security tests are failing.
   deploy-supabase-functions:
-    needs: [test, check-config]
+    needs: [test, test-edge-functions, check-config]
     if: >-
       github.ref == 'refs/heads/main'
       && github.event_name == 'push'
