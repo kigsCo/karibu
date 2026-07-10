@@ -32,10 +32,13 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      # --node-modules-dir=none: the repo root holds the frontend's package.json,
+      # and without this Deno adopts it, switches to node_modules resolution, and
+      # fails to resolve the functions' own npm/JSR imports.
       - name: Type-check the edge functions
-        run: deno check supabase/functions/_shared/*.ts supabase/functions/*/index.ts
+        run: deno check --node-modules-dir=none supabase/functions/_shared/*.ts supabase/functions/*/index.ts
       - name: Run the edge-function tests
-        run: deno test --allow-env --allow-net supabase/functions/
+        run: deno test --allow-env --allow-net --node-modules-dir=none supabase/functions/
 
   # The `secrets` context is not available in a job-level `if:`, so resolve it in a
   # step and let the deploy job gate on the output. Until a cloud Supabase project
