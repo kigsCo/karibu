@@ -12,6 +12,10 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+# .env.production is the exception: it holds ONLY the two PUBLIC Vite values
+# (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY) so the Vercel build points at the
+# cloud project. Both ship in the browser bundle by design — no secret here.
+!.env.production
 
 # Supabase local
 supabase/.branches
