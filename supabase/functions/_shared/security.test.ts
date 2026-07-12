@@ -5,6 +5,7 @@ import { assert, assertEquals, assertFalse } from "jsr:@std/assert@1";
 import {
   clientIpFromXff,
   extractCallbackToken,
+  hmacHex,
   isIpLiteral,
   timingSafeEqual,
   withCallbackToken,
@@ -98,4 +99,49 @@ Deno.test("a spoofed X-Forwarded-For cannot pick its own rate-limit bucket", () 
   const buckets = new Set(spoofs.map((s) => clientIpFromXff(s)));
   assertEquals(buckets.size, 1, "all spoofs must land in one bucket");
   assertEquals([...buckets][0], "41.90.64.1");
+});
+
+// --- hmacHex -----------------------------------------------------------------
+
+Deno.test("hmacHex: matches the RFC 4231 test vector", async () => {
+  // RFC 4231 §4.3, case 2 — both key and data are plain ASCII, so this pins the
+  // UTF-8 encoding and the hex formatting, not just "some digest came out".
+  assertEquals(
+    await hmacHex("Jefe", "what do ya want for nothing?"),
+    "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+  );
+});
+
+Deno.test("hmacHex: is deterministic and fixed-width", async () => {
+  const once = await hmacHex("k", "254712345678");
+  const twice = await hmacHex("k", "254712345678");
+  assertEquals(once, twice);
+  assertEquals(once.length, 64, "SHA-256 is 32 bytes => 64 hex chars");
+  assert(/^[0-9a-f]{64}$/.test(once), "lowercase hex, zero-padded");
+});
+
+Deno.test("hmacHex: a leading zero byte is not dropped", async () => {
+  // A naive `toString(16)` per byte loses "0f" -> "f" and silently shortens the
+  // digest. Search a small space for a digest that starts with a zero nibble.
+  let sawLeadingZero = false;
+  for (let i = 0; i < 64 && !sawLeadingZero; i++) {
+    const digest = await hmacHex("k", `2547000000${String(i).padStart(2, "0")}`);
+    assertEquals(digest.length, 64);
+    if (digest.startsWith("0")) sawLeadingZero = true;
+  }
+  assert(sawLeadingZero, "expected at least one digest with a leading zero nibble");
+});
+
+Deno.test("hmacHex: the key changes the digest", async () => {
+  // The point of keying it: without the secret, the phone -> bucket mapping is
+  // not reproducible, so the table cannot be brute-forced back to numbers.
+  const a = await hmacHex("secret-a", "254712345678");
+  const b = await hmacHex("secret-b", "254712345678");
+  assert(a !== b, "different keys must produce different buckets");
+});
+
+Deno.test("hmacHex: different phones land in different buckets", async () => {
+  const a = await hmacHex("k", "254712345678");
+  const b = await hmacHex("k", "254712345679");
+  assert(a !== b);
 });

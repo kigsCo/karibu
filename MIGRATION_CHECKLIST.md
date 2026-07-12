@@ -72,14 +72,14 @@ running code disagree, **trust production** and update the doc.
 
 - [x] `@supabase/supabase-js`, client at `src/lib/supabase.js`.
 - [x] `.env.example` with the two public `VITE_*` vars.
-- [x] Migrations under `supabase/migrations/` (8 files: schema, RLS, functions/triggers/
+- [x] Migrations under `supabase/migrations/` (10 files: schema, RLS, functions/triggers/
       views, rate limits, role grants, `cities.sort_order`, payment/abuse hardening,
-      API-role grant lockdown).
+      API-role grant lockdown, PostGIS relocation, `guides.hero_variant`).
 - [x] RLS policies. Verified on the cloud project: all 10 app tables have RLS on.
 - [x] `supabase/seed.sql` ports the prototype data; Nairobi salons are `status='active'`.
 - [x] **Cloud project provisioned** — `karibu` (`jwiptjcpczamewmyaost`), `eu-central-1`,
-      free plan. All 8 migrations applied, seed loaded (5 cities, 13 categories,
-      47 sub-types, 10 active businesses, 6 published reviews, 2 published guides).
+      free plan. All 10 migrations applied, seed loaded (5 cities, 13 categories,
+      47 sub-types, 10 active businesses, 6 published reviews, 6 published guides).
       Remote migration versions were realigned to the repo filenames, so
       `supabase db push` is now a no-op rather than a re-apply.
 - [x] `SUPABASE_SETUP.md` written.
@@ -145,29 +145,70 @@ those tables are service-role only.
 - [x] `cities` + `categories`/`sub_types` → `ReferenceDataContext` (KAR-5).
 - [x] `recommended` + `salonsList` → `useBusinesses` (keyset paginated, KAR-6).
 - [x] `BusinessScreen` → `useBusinessDetail` by slug + published reviews (KAR-7).
-- [ ] `guides` / `GuidesHubScreen` / `GuideArticleScreen` — still the in-code constant.
+- [x] `guides` / `GuidesHubScreen` / `GuideArticleScreen` → `useGuides` + `useGuideDetail`.
 - [x] Loading/empty states: fallback-first, so first paint is unchanged.
 
-## Phase 4 — Edge functions
+### Deviations and decisions — Phase 3 (guides)
+
+- **The seed only carried 2 of the 6 guides, and truncated both.** `safety-nairobi` had 7
+  body blocks against the prototype's 11; `areas-nairobi` had 8 against 14. The seed's
+  GUIDES section is now **generated** from the `guides` constant in `KaribuApp.jsx` rather
+  than retyped, so the live copy cannot drift from the prototype's. A diff proved the
+  result byte-identical to the constant.
+- **New column: `guides.hero_variant`** (`20260710180000`). Both guide screens draw their
+  hero with `<HeroImage variant={g.heroVariant} />`, and the table had nowhere to put it —
+  every guide would have rendered the same hero. Nullable; the mapper falls back to
+  `'default'`, exactly as `HeroImage` already did. `hero_image_url` remains the column for
+  the day real photography exists.
+- **`updated_at` is pinned to April 2026 in the seed**, because the UI renders
+  "Updated April 2026" from it. The `guides_set_updated_at` trigger is `BEFORE UPDATE`
+  only, so an INSERT keeps the value. Loading the guides into the cloud project used an
+  upsert with that trigger suspended inside a single atomic `DO` block — an UPDATE would
+  otherwise have stamped `now()` over the editorial date on the two pre-existing rows.
+- **`related_businesses` is a `uuid[]`, not a foreign key**, so PostgREST cannot embed it.
+  `useGuideDetail` fetches those rows in a second query and re-sorts them into the array's
+  order, because an array has an order and an `IN (...)` does not. The seed resolves the
+  uuids by slug subquery, never by literal, since PKs differ per environment.
+- **The list query omits `body_json`.** Bodies are a few KB each and no list screen renders
+  one (`db-performance`: never select an unbounded column on a list path).
+
+Verified against the cloud project with the public anon key: 6 guides, block counts
+11/14/10/8/10/8, both featured guides resolving 2 related businesses each, every row
+reading "Updated April 2026", unpublished guides invisible to `anon`, and no `body_json`
+on the list path.
+
+## Phase 4 — Edge functions ✅ (code complete; deploy is Phase 7)
 
 - [x] `ask-karibu` implemented; frontend calls it via `functions.invoke`. **No key in the
-      browser bundle** (grep-verified against `dist/`).
+      browser bundle** — `dist/` greps clean for `api.anthropic.com`, `sk-ant`, `x-api-key`,
+      `anthropic-version`, and `ANTHROPIC_API_KEY`. This is the phase's stated acceptance
+      test, and it passes.
 - [x] `submit-review`, `moderate-reviews`, `calculate-rankings`, `mpesa-stk-push`,
       `mpesa-callback`, `send-onboarding-email` exist in `supabase/functions/`.
+- [x] Every function that only our backend may call is authenticated as such, and every
+      publicly-reachable function that costs money is metered. See the blockers below.
+- [x] 66 Deno tests pass (`deno test --allow-env --allow-net --node-modules-dir=none
+      supabase/functions/`). The 10 new hardening tests were run against the pre-fix
+      handlers from `main` and **all 10 fail there** — they encode the vulnerabilities, not
+      the implementation.
 - [ ] Deployed anywhere real; secrets set; crons scheduled.
 - [ ] Confirm the model string against current Anthropic docs before go-live.
 
 ### 🔴 Security blockers — must be fixed BEFORE any edge function is deployed
 
-Found by automated review on 2026-07-10 and confirmed by reading the code. **None was
-exploitable**: no cloud Supabase project exists, so no function is reachable. Each becomes
-live the moment Phase 2 provisions a project and Phase 7 deploys. The CI deploy job is
+Found by automated review on 2026-07-10 and confirmed by reading the code. **None is
+exploitable today**: a cloud project now exists, but **no edge function is deployed to it**,
+so none is reachable. Each becomes live the moment Phase 7 deploys. The CI deploy job is
 gated on `SUPABASE_PROJECT_REF` being set, so adding that secret is the trigger that arms
 all of this. Do not add it until every box below is ticked.
 
-The three named findings were fixed on 2026-07-10. Their regression tests live beside the
-functions and fail against the pre-fix handlers:
-`deno test --allow-env --allow-net supabase/functions/`.
+Seven code findings were fixed on 2026-07-10 (three in the first pass, four more found
+while closing out Phase 4). Their regression tests live beside the functions and fail
+against the pre-fix handlers:
+`deno test --allow-env --allow-net --node-modules-dir=none supabase/functions/`.
+
+What remains open below is **configuration**, not code: two secrets to generate and the
+cron schedule to install.
 
 - [x] **CRITICAL — `mpesa-callback` was an unauthenticated payment bypass.**
       `verify_jwt = false` has to stay (Safaricom cannot send a Supabase JWT), so
@@ -189,17 +230,40 @@ functions and fail against the pre-fix handlers:
       `x-forwarded-for` hop (the one Supabase's edge appends, which a client cannot forge)
       and adds two limits bound to the authenticated `auth.uid()`: 3 reviews per user per
       24h, and 1 review per business per 30 days. Backed by a new composite index.
+- [x] **HIGH — `mpesa-stk-push` could ring any phone in Kenya.** `verify_jwt = false` and no
+      limits: a stranger could POST a phone number and make Safaricom push a payment prompt
+      to it, on our Daraja credentials, while writing `pending_payment` rows for arbitrary
+      `business_id`s. Now: **`MPESA_ENABLED` defaults to off** (503 before any parsing, DB
+      call, or Daraja call — the guide's "gate it behind config and don't block launch on
+      it"); when on, a per-IP limit (5/hour) and a **per-phone limit counted across every
+      IP** (3/hour), because the person harmed is the one holding the phone and an attacker
+      has as many IPs as they like. The phone is bucketed under an HMAC keyed by
+      `MPESA_CALLBACK_SECRET`, so `rate_limits` never stores a subscriber's number. The
+      `business_id` must be a uuid naming an `active` business.
+- [x] **HIGH — `send-onboarding-email` was an open mail relay.** `verify_jwt = false` and no
+      caller check: anyone could POST a recipient and an attacker-chosen `businessName` and
+      have it delivered, signed and aligned, from our verified sending domain. Now gated on
+      `INTERNAL_FUNCTION_SECRET`.
+- [x] **HIGH — `ask-karibu` was a public, unmetered LLM proxy.** Public by design, but every
+      call spends Anthropic tokens on our key, and there was no rate limit — a `for` loop
+      was a bill. Now metered at 60 turns per IP per hour, checked **before** the model is
+      reached. Loose on purpose: Kenyan mobile traffic is heavily CGNAT'd, so an "IP" can be
+      a whole neighbourhood. The hard cost ceiling belongs in Anthropic's spend limits.
+- [x] **MEDIUM — the cron functions were publicly invokable.** `moderate-reviews` and
+      `calculate-rankings` run with the service role: one spends Anthropic tokens and
+      rewrites `reviews`, the other rewrites `ranking_score` on every active business and
+      can unlist them. Both now require an `x-karibu-internal-secret` header compared in
+      constant time against `INTERNAL_FUNCTION_SECRET`, and **fail closed** (503) when it is
+      unset. `verify_jwt = true` would *not* have fixed this: the anon key is a valid JWT
+      that ships in the browser bundle, so it authenticates every visitor.
 - [ ] **Set `MPESA_CALLBACK_SECRET`** (`openssl rand -hex 32`) as a Supabase edge-function
       secret alongside the M-Pesa credentials. Both `mpesa-stk-push` and `mpesa-callback`
       refuse to run without it, by design.
-- [ ] **`mpesa-stk-push` is still publicly invokable** (`verify_jwt = false`). The payment
-      bypass is closed, so this can no longer buy a free tier — but anyone can still make
-      Karibu send STK prompts to arbitrary phone numbers, which is a harassment and
-      Daraja-cost vector. Before go-live: require auth, or rate-limit per IP and per
-      `business_id`, and verify the caller owns the business.
-- [ ] **Review `verify_jwt = false` on the cron functions.** `moderate-reviews` and
-      `calculate-rankings` are publicly invokable. Low impact (they only run work early),
-      but they should be reachable only by the scheduler.
+- [ ] **Set `INTERNAL_FUNCTION_SECRET`** (`openssl rand -hex 32`) as an edge-function secret
+      **and** as a Vault secret named `internal_function_secret`, so the pg_cron jobs can
+      present it. Rotating one means rotating both. See `SUPABASE_SETUP.md`.
+- [ ] **Schedule the crons** (`pg_cron` + `pg_net`, SQL in `SUPABASE_SETUP.md`). Not a
+      migration: a migration is committed to git, and the secret would go with it.
 - [ ] **Residual prompt-injection risk in `moderate-reviews`.** The gate and the forced
       tool call mean a review cannot publish *itself*. A body that slips past the gate
       could still argue the model into a wrong verdict on the five axes — the blast radius

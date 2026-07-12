@@ -40,6 +40,11 @@ const FAKE_BUSINESSES = [
 
 // Capture what the handler sends to Anthropic.
 let capturedAnthropicBody: Record<string, unknown> | null = null;
+// Capture the fire-and-forget conversation log, so we can prove it happened
+// (and that it happened through the stub, not the network — see below).
+let capturedConversationLog: Record<string, unknown> | null = null;
+// How many hits the per-IP rate limiter should believe it has already seen.
+let rateLimitHits = 0;
 
 // --- Stub the Supabase service client BEFORE importing the handler ---------
 // The handler imports createServiceClient from ../_shared/client.ts. We can't
@@ -58,6 +63,21 @@ function installFetchStub() {
   // deno-lint-ignore no-explicit-any
   globalThis.fetch = (async (input: any, init?: any): Promise<Response> => {
     const url = typeof input === "string" ? input : input.url;
+
+    // The per-IP meter that stands in front of the model. HEAD is the count
+    // query; POST records a hit.
+    if (url.includes("/rest/v1/rate_limits")) {
+      if ((init?.method ?? "GET").toUpperCase() === "HEAD") {
+        return new Response(null, {
+          status: 200,
+          headers: { "content-range": `*/${rateLimitHits}` },
+        });
+      }
+      return new Response("[]", {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      });
+    }
 
     // Anthropic messages endpoint.
     if (url.includes("api.anthropic.com")) {
@@ -81,6 +101,7 @@ function installFetchStub() {
 
     // ai_conversations fire-and-forget insert — accept silently.
     if (url.includes("/rest/v1/ai_conversations")) {
+      capturedConversationLog = JSON.parse(init?.body ?? "null");
       return new Response("[]", {
         status: 201,
         headers: { "content-type": "application/json" },
@@ -101,70 +122,124 @@ Deno.env.set("SUPABASE_URL", "http://localhost:54321");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-key");
 Deno.env.set("SUPABASE_ANON_KEY", "test-anon-key");
 
-Deno.test("ask-karibu grounds the prompt in the directory and uses claude-sonnet-4-6", async () => {
-  installFetchStub();
-  capturedAnthropicBody = null;
+type Handler = (req: Request) => Response | Promise<Response>;
+let cachedHandler: Handler | null = null;
 
-  // Import the handler module. Importing for side effects registers Deno.serve;
-  // we capture the handler it was given by stubbing Deno.serve first.
-  let handler: ((req: Request) => Response | Promise<Response>) | null = null;
+/**
+ * Import the handler module. Importing for side effects registers Deno.serve;
+ * we capture the handler it was given by stubbing Deno.serve first. The module
+ * cache means this can only happen once, so the result is memoised.
+ */
+async function loadHandler(): Promise<Handler> {
+  if (cachedHandler) return cachedHandler;
   const realServe = Deno.serve;
   // deno-lint-ignore no-explicit-any
   (Deno as any).serve = (h: any) => {
-    handler = typeof h === "function" ? h : h?.handler;
+    cachedHandler = typeof h === "function" ? h : h?.handler;
     // Return a dummy server-like object; nothing calls its methods in the test.
     return { finished: Promise.resolve(), shutdown() {}, ref() {}, unref() {} };
   };
-
   await import("./index.ts");
-
+  // deno-lint-ignore no-explicit-any
   (Deno as any).serve = realServe;
-  // The assignment above happens inside a closure, which TypeScript's control
-  // flow analysis cannot see — without this cast it narrows `handler` to `null`
-  // and every use below becomes a type error.
-  const registered = handler as ((req: Request) => Response | Promise<Response>) | null;
-  assert(registered, "handler was not registered via Deno.serve");
+  assert(cachedHandler, "handler was not registered via Deno.serve");
+  return cachedHandler!;
+}
 
-  const req = new Request("http://localhost/ask-karibu", {
+function askRequest(): Request {
+  return new Request("http://localhost/ask-karibu", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-forwarded-for": "41.90.64.1" },
     body: JSON.stringify({
       messages: [{ role: "user", content: "Where can I get my nails done?" }],
       city: "nairobi",
       sessionId: "test-session",
     }),
   });
+}
 
-  const res = await registered(req);
-  assertEquals(res.status, 200);
+Deno.test("ask-karibu grounds the prompt in the directory and uses claude-sonnet-4-6", async () => {
+  installFetchStub();
+  capturedAnthropicBody = null;
+  capturedConversationLog = null;
+  rateLimitHits = 0;
 
-  // --- Assertions on the Anthropic request --------------------------------
-  // Same closure-assignment problem as `handler` above; cast before narrowing.
-  const sent = capturedAnthropicBody as Record<string, unknown> | null;
-  assert(sent, "no Anthropic request captured");
-  assertEquals(
-    sent.model,
-    "claude-sonnet-4-6",
-    "must call the exact model claude-sonnet-4-6",
-  );
+  const registered = await loadHandler();
+  const req = askRequest();
 
-  const system = String(sent.system ?? "");
-  assert(
-    system.includes("verified directory"),
-    "system prompt should describe the verified directory",
-  );
-  assert(
-    system.includes("Posh Palace Salon"),
-    "system prompt should embed the fetched businesses (directory grounding)",
-  );
-  assert(
-    system.includes("Karibu Recommended"),
-    "recommended businesses should be marked in the directory",
-  );
-  assert(
-    system.includes("nairobi"),
-    "system prompt should mention the requested city",
-  );
+  try {
+    const res = await registered(req);
+    assertEquals(res.status, 200);
 
-  restoreFetch();
+    // The handler logs to ai_conversations WITHOUT awaiting it — by design, so
+    // logging never sits on the request path (CLAUDE.md). That insert's fetch is
+    // therefore still pending right here, and supabase-js binds `globalThis.fetch`
+    // late (`(...args) => globalThis.fetch(...args)`). Restore the real fetch now
+    // and the insert escapes the stub onto the network: against a dev machine
+    // running `supabase start`, it lands real rows in the local database, and the
+    // test fails the resource sanitizer. Yield one macrotask so the insert is
+    // issued and answered by the stub while the stub is still installed.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // --- Assertions on the Anthropic request --------------------------------
+    // Same closure-assignment problem as `handler` above; cast before narrowing.
+    const sent = capturedAnthropicBody as Record<string, unknown> | null;
+    assert(sent, "no Anthropic request captured");
+    assertEquals(
+      sent.model,
+      "claude-sonnet-4-6",
+      "must call the exact model claude-sonnet-4-6",
+    );
+
+    const system = String(sent.system ?? "");
+    assert(
+      system.includes("verified directory"),
+      "system prompt should describe the verified directory",
+    );
+    assert(
+      system.includes("Posh Palace Salon"),
+      "system prompt should embed the fetched businesses (directory grounding)",
+    );
+    assert(
+      system.includes("Karibu Recommended"),
+      "recommended businesses should be marked in the directory",
+    );
+    assert(
+      system.includes("nairobi"),
+      "system prompt should mention the requested city",
+    );
+
+    // The conversation log fired, and it went through the stub.
+    const logged = capturedConversationLog as Record<string, unknown> | null;
+    assert(logged, "the fire-and-forget ai_conversations insert never reached the stub");
+    assertEquals(logged.session_id, "test-session");
+    assertEquals(logged.city_slug, "nairobi");
+  } finally {
+    // In a `finally`: an assertion failure above must not leak the stub into
+    // whatever test file `deno test` runs next in this same process.
+    restoreFetch();
+  }
+});
+
+Deno.test("ask-karibu meters the caller before it spends a single Anthropic token", async () => {
+  installFetchStub();
+  capturedAnthropicBody = null;
+  // The limiter believes this IP has already used its hour's allowance.
+  rateLimitHits = 60;
+
+  const registered = await loadHandler();
+  try {
+    const res = await registered(askRequest());
+    assertEquals(res.status, 429);
+    await res.body?.cancel();
+    // The assertion that matters: our API key was never used. A 429 returned
+    // *after* calling Anthropic would have cost us the tokens anyway.
+    assertEquals(
+      capturedAnthropicBody,
+      null,
+      "a rate-limited request must never reach the model",
+    );
+  } finally {
+    restoreFetch();
+  }
 });

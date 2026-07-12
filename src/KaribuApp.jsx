@@ -28,6 +28,9 @@ import { useReferenceData } from "./context/ReferenceDataContext.jsx";
 // if Supabase is unreachable).
 import { useBusinesses } from "./hooks/useBusinesses.js";
 import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
+// KAR-9: the `guides` constant below is the fallback; published guides come from
+// the `guides` table. Same contract — identical first paint, live data replaces it.
+import { useGuideDetail, useGuides } from "./hooks/useGuides.js";
 
 // ---------- DATA ----------
 const visitorEssentials = [
@@ -553,6 +556,8 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
   // empty rail would collapse the section; live-and-empty keeps the fallback.
   const { items: liveTop } = useBusinesses({ fallback: recommended });
   const topBusinesses = (liveTop.length ? liveTop : recommended).slice(0, 6);
+  // KAR-9: the "Read before you go" rail reads the live featured guides.
+  const { items: liveGuides } = useGuides({ fallback: guides });
   const placeholders = [
     "nails in Westlands",
     "airport transfer tonight",
@@ -762,7 +767,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
-          {guides.filter((g) => g.featured).map((g) => {
+          {liveGuides.filter((g) => g.featured).map((g) => {
             const cat = guideCategories.find((c) => c.key === g.category);
             return (
               <button
@@ -2441,13 +2446,15 @@ const MerchantDashboardScreen = ({ back }) => {
 // ---------- SCREEN: GUIDES HUB ----------
 const GuidesHubScreen = ({ go, activeCity }) => {
   const { cities } = useReferenceData();
-  const featured = guides.filter((g) => g.featured);
+  // KAR-9: published guides from the DB; the prototype constant is the fallback.
+  const { items: guideList } = useGuides({ fallback: guides });
+  const featured = guideList.filter((g) => g.featured);
   const cityLabel = cities.find((c) => c.key === activeCity)?.label || "Nairobi";
 
   // Group non-featured guides by category
   const byCategory = guideCategories.map((cat) => ({
     ...cat,
-    articles: guides.filter((g) => g.category === cat.key),
+    articles: guideList.filter((g) => g.category === cat.key),
   }));
 
   return (
@@ -2554,7 +2561,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
       <div className="px-5 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">All guides</h3>
         <div className="space-y-2">
-          {guides.map((g) => {
+          {guideList.map((g) => {
             const cat = guideCategories.find((c) => c.key === g.category);
             return (
               <button
@@ -2609,14 +2616,24 @@ const GuidesHubScreen = ({ go, activeCity }) => {
 
 // ---------- SCREEN: GUIDE ARTICLE ----------
 const GuideArticleScreen = ({ payload, back, go }) => {
-  const g = payload || guides[0];
+  const fallbackGuide = payload || guides[0];
+  // KAR-9: the list rows that route here carry no body (see useGuides), so the
+  // article fetches its own. Until it lands, `fallbackGuide` is what renders —
+  // which for the prototype constant already includes a full body.
+  const { items: guideList } = useGuides({ fallback: guides });
+  const { guide, loading: bodyLoading } = useGuideDetail(fallbackGuide.id, fallbackGuide);
+  const g = guide || fallbackGuide;
   const cat = guideCategories.find((c) => c.key === g.category);
   const [saved, setSaved] = useState(false);
 
-  // Find related businesses from the directory
+  // Find related businesses. A fallback guide lists prototype business ids; a
+  // live one carries already-resolved business objects (related_businesses is a
+  // uuid[], not a foreign key, so PostgREST cannot embed it). Accept both.
   const relatedBiz = (g.relatedBusinesses || [])
-    .map((id) => recommended.find((r) => r.id === id))
+    .map((b) => (typeof b === "string" ? recommended.find((r) => r.id === b) : b))
     .filter(Boolean);
+
+  const body = g.body || [];
 
   return (
     <div className="fade-in pb-6">
@@ -2685,7 +2702,17 @@ const GuideArticleScreen = ({ payload, back, go }) => {
 
       {/* Article body */}
       <div className="px-5 py-5 border-b border-ink-10">
-        {g.body.map((block, i) => {
+        {body.length === 0 && bodyLoading && (
+          // Quiet, on-brand placeholder — the article's own palette, no spinner.
+          <div className="space-y-2.5" aria-hidden="true">
+            <div className="h-3 rounded bg-ivory-2 w-11/12" />
+            <div className="h-3 rounded bg-ivory-2 w-full" />
+            <div className="h-3 rounded bg-ivory-2 w-10/12" />
+            <div className="h-3 rounded bg-ivory-2 w-full mt-5" />
+            <div className="h-3 rounded bg-ivory-2 w-9/12" />
+          </div>
+        )}
+        {body.map((block, i) => {
           if (block.type === "h") {
             return (
               <h3 key={i} className="font-serif-d text-xl text-ink leading-tight mt-5 mb-2 first:mt-0">
@@ -2795,7 +2822,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
       <div className="px-5 py-4">
         <h3 className="font-serif-d text-lg text-ink mb-2">More from {cat.label}</h3>
         <div className="space-y-2">
-          {guides
+          {guideList
             .filter((other) => other.category === g.category && other.id !== g.id)
             .slice(0, 3)
             .map((other) => (
@@ -2816,7 +2843,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
                 <ChevronRight size={15} className="text-stone-w" />
               </button>
             ))}
-          {guides.filter((o) => o.category === g.category && o.id !== g.id).length === 0 && (
+          {guideList.filter((o) => o.category === g.category && o.id !== g.id).length === 0 && (
             <p className="text-xs text-stone-w italic">
               More {cat.label.toLowerCase()} guides coming soon.
             </p>

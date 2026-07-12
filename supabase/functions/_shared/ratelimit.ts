@@ -67,3 +67,30 @@ export async function checkIpRateLimit(
     return true;
   }
 }
+
+/**
+ * The sentinel `ip` for buckets that are not keyed by an IP at all. The column
+ * is `inet NOT NULL`, so a global bucket still has to store something.
+ *
+ * `clientIpFromXff` also falls back to this address, but the two can never
+ * collide: a global bucket's `key` is namespaced (`<action>:phone:<hmac>`) and
+ * a per-IP bucket's key is the bare action name.
+ */
+const GLOBAL_BUCKET_IP = "0.0.0.0";
+
+/**
+ * A limit on `key` alone, counted across every source IP.
+ *
+ * Per-IP limits protect *us* from one noisy client. Some abuse is aimed at a
+ * third party instead — an STK push makes a stranger's phone buzz with a
+ * payment prompt, and an attacker with a botnet has as many IPs as they like.
+ * What has to be limited there is the target, not the source.
+ */
+export function checkGlobalRateLimit(
+  supabase: SupabaseClient,
+  key: string,
+  max: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  return checkIpRateLimit(supabase, GLOBAL_BUCKET_IP, key, max, windowSeconds);
+}
