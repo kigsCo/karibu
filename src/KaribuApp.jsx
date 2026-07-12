@@ -655,7 +655,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       {/* Category grid */}
       <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">Browse services</h3>
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 md:gap-3">
           {categories.map((cat) => {
             const Icon = cat.Icon;
             const hasSubs = (cat.subTypes && cat.subTypes.length > 0) || (cat.cuisineTags && cat.cuisineTags.length > 0);
@@ -691,7 +691,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
             See all <ChevronRight size={13} />
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible px-5 md:px-8 pb-1">
+        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:overflow-visible px-5 md:px-8 pb-1">
           {topBusinesses.map((b) => (
             <button
               key={b.id}
@@ -727,7 +727,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       {/* Tourist favourites */}
       <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">Visitors are loving</h3>
-        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3">
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-3">
           {[
             { name: "Mama Oliech's", cat: "Seafood · Fish specialist", hood: "Parklands", rating: 4.7, reviews: 890 },
             { name: "Connect Coffee Roasters", cat: "Specialty coffee", hood: "Lavington", rating: 4.8, reviews: 412 },
@@ -766,7 +766,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
             All guides <ChevronRight size={13} />
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible px-5 md:px-8 pb-1">
+        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:overflow-visible px-5 md:px-8 pb-1">
           {liveGuides.filter((g) => g.featured).map((g) => {
             const cat = guideCategories.find((c) => c.key === g.category);
             return (
@@ -3126,7 +3126,7 @@ export default function Karibu() {
             The definite height here is what lets the screens that use h-full
             (AskKaribuScreen, PlaceholderScreen) resolve against the flex row. */}
         <div
-          className="mx-auto w-full max-w-sm md:max-w-2xl lg:max-w-5xl xl:max-w-6xl h-full flex flex-col overflow-hidden"
+          className="w-full h-full flex flex-col overflow-hidden"
           style={{ backgroundColor: "#F7F1E8", paddingTop: "env(safe-area-inset-top)" }}
         >
           {/* Desktop top nav (md+); the mobile bottom bar below is its counterpart.
