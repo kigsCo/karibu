@@ -2677,6 +2677,10 @@ const GuideArticleScreen = ({ payload, back, go }) => {
         </div>
       </div>
 
+      {/* Readable measure: the hero stays full-bleed above, but the long-form
+          prose below gets a comfortable centred column on wide screens so lines
+          don't stretch edge-to-edge. Full-width on mobile (md-only cap). */}
+      <div className="md:max-w-3xl md:mx-auto">
       {/* Title block */}
       <div className="px-5 md:px-8 pt-5 pb-3 border-b border-ink-10">
         <h1 className="font-serif-d text-3xl text-ink leading-tight">{g.title}</h1>
@@ -2849,6 +2853,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
             </p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
