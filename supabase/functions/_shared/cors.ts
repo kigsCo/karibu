@@ -9,7 +9,13 @@
 export const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  // supabase-js `functions.invoke` sends apikey + x-client-info (and, on newer
+  // clients, x-supabase-api-version) alongside authorization. The browser
+  // preflight fails unless every one of those is allowed here — omitting them is
+  // why an in-browser call 404s/throws "Failed to send a request" even though a
+  // raw curl (which skips preflight) works. This is the canonical Supabase set.
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
 };
 
 /**
