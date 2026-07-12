@@ -576,7 +576,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
   return (
     <div className="fade-in">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-5 md:px-8 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-clay flex items-center justify-center">
             <span className="font-serif-d text-xl" style={{ color: "#F7F1E8", lineHeight: 1 }}>K</span>
@@ -599,17 +599,17 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       </div>
 
       {/* Greeting */}
-      <div className="px-5 pt-4 pb-3">
-        <div className="font-serif-d text-3xl text-ink leading-tight">
+      <div className="px-5 md:px-8 pt-4 pb-3">
+        <div className="font-serif-d text-3xl md:text-4xl text-ink leading-tight">
           <span className="greeting-cycle inline-block">Karibu,</span> traveller.
         </div>
-        <div className="font-serif-d italic text-xl text-stone-w leading-tight mt-0.5">
+        <div className="font-serif-d italic text-xl md:text-2xl text-stone-w leading-tight mt-0.5">
           What do you need in {cityLabel}?
         </div>
       </div>
 
       {/* Ask Karibu AI search */}
-      <div className="px-5 pb-5">
+      <div className="px-5 md:px-8 pb-5">
         <button
           onClick={() => go("ask")}
           className="w-full flex items-center gap-2.5 rounded-xl px-4 py-3.5 text-left relative overflow-hidden border"
@@ -631,16 +631,16 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       </div>
 
       {/* Visitor essentials */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="font-serif-d text-lg text-ink">For visitors</h3>
           <span className="text-xs text-stone-w uppercase tracking-wider">Karibu picks</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 md:gap-4">
           {visitorEssentials.map(({ label, sub, Icon }) => (
             <button
               key={label}
-              className="flex flex-col items-center text-center px-1 py-3 rounded-xl bg-forest-soft border border-ink-10"
+              className="flex flex-col items-center text-center px-1 py-3 rounded-xl bg-forest-soft border border-ink-10 transition hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="w-9 h-9 rounded-full bg-forest flex items-center justify-center mb-1.5">
                 <Icon size={16} color="#F7F1E8" />
@@ -653,9 +653,9 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       </div>
 
       {/* Category grid */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">Browse services</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
           {categories.map((cat) => {
             const Icon = cat.Icon;
             const hasSubs = (cat.subTypes && cat.subTypes.length > 0) || (cat.cuisineTags && cat.cuisineTags.length > 0);
@@ -663,12 +663,12 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
               <button
                 key={cat.key}
                 onClick={() => go(hasSubs ? "subcategory" : "category", cat)}
-                className="flex flex-col items-center text-center py-3 px-1.5 rounded-xl border border-ink-10 hover:bg-ivory-2 transition"
+                className="flex flex-col items-center text-center py-3 md:py-4 px-1.5 rounded-xl border border-ink-10 transition hover:bg-ivory-2 hover:shadow-md hover:-translate-y-0.5"
               >
-                <div className="w-9 h-9 rounded-full bg-clay-soft flex items-center justify-center mb-1.5">
-                  <Icon size={16} className="text-clay" />
+                <div className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-clay-soft flex items-center justify-center mb-1.5">
+                  <Icon size={16} className="text-clay md:w-5 md:h-5" />
                 </div>
-                <span className="text-[10px] font-semibold text-ink leading-tight">{cat.label}</span>
+                <span className="text-[10px] md:text-xs font-semibold text-ink leading-tight">{cat.label}</span>
                 {hasSubs && (
                   <span className="text-[9px] text-stone-w leading-tight mt-0.5">
                     {cat.subTypes?.length || cat.cuisineTags?.length} types
@@ -682,7 +682,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
 
       {/* Karibu Recommended carousel */}
       <div className="pb-6">
-        <div className="px-5 flex items-baseline justify-between mb-3">
+        <div className="px-5 md:px-8 flex items-baseline justify-between mb-3">
           <div>
             <h3 className="font-serif-d text-lg text-ink">Karibu Recommended</h3>
             <p className="text-xs text-stone-w">Trusted by visitors · verified monthly</p>
@@ -691,12 +691,12 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
             See all <ChevronRight size={13} />
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
+        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible px-5 md:px-8 pb-1">
           {topBusinesses.map((b) => (
             <button
               key={b.id}
               onClick={() => go("business", b)}
-              className="flex-shrink-0 w-60 rounded-2xl overflow-hidden border border-ink-10 bg-white text-left"
+              className="flex-shrink-0 w-60 md:w-auto rounded-2xl overflow-hidden border border-ink-10 bg-white text-left transition hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="h-32 relative">
                 <HeroImage variant={b.image} />
@@ -725,9 +725,9 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       </div>
 
       {/* Tourist favourites */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">Visitors are loving</h3>
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3">
           {[
             { name: "Mama Oliech's", cat: "Seafood · Fish specialist", hood: "Parklands", rating: 4.7, reviews: 890 },
             { name: "Connect Coffee Roasters", cat: "Specialty coffee", hood: "Lavington", rating: 4.8, reviews: 412 },
@@ -735,7 +735,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
           ].map((b, i) => (
             <button
               key={i}
-              className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-ink-10 bg-white text-left"
+              className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-ink-10 bg-white text-left transition hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                 <HeroImage variant={["posh", "talisman", "artcaffe"][i]} />
@@ -757,7 +757,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
 
       {/* Read before you go — guides teaser */}
       <div className="pb-6">
-        <div className="px-5 flex items-baseline justify-between mb-3">
+        <div className="px-5 md:px-8 flex items-baseline justify-between mb-3">
           <div>
             <h3 className="font-serif-d text-lg text-ink">Read before you go</h3>
             <p className="text-xs text-stone-w">Editorial guides · updated monthly</p>
@@ -766,20 +766,20 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
             All guides <ChevronRight size={13} />
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
+        <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible px-5 md:px-8 pb-1">
           {liveGuides.filter((g) => g.featured).map((g) => {
             const cat = guideCategories.find((c) => c.key === g.category);
             return (
               <button
                 key={g.id}
                 onClick={() => go("guide_article", g)}
-                className="flex-shrink-0 w-60 rounded-2xl overflow-hidden border border-ink-10 bg-white text-left"
+                className="flex-shrink-0 w-60 md:w-auto rounded-2xl overflow-hidden border border-ink-10 bg-white text-left transition hover:shadow-md hover:-translate-y-0.5"
               >
                 <div className="h-24 relative">
                   <HeroImage variant={g.heroVariant} />
                   <div className="absolute top-2 left-2">
                     <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold backdrop-blur"
                       style={{ backgroundColor: "rgba(247,241,232,0.85)", color: cat?.color }}
                     >
                       <cat.Icon size={10} />
@@ -789,7 +789,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
                 </div>
                 <div className="p-3">
                   <h4 className="font-serif-d text-sm text-ink leading-tight">{g.title}</h4>
-                  <div className="flex items-center gap-1.5 mt-2 text-[10px] text-stone-w">
+                  <div className="flex items-center gap-1.5 mt-2 text-[10px] md:text-xs text-stone-w">
                     <Clock size={10} />
                     <span>{g.readTime} min read</span>
                   </div>
@@ -801,7 +801,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
       </div>
 
       {/* Own a business CTA */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <button
           onClick={() => go("business_signup")}
           className="w-full rounded-2xl p-5 text-left relative overflow-hidden border border-ink-10"
@@ -859,7 +859,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   return (
     <div className="fade-in pb-6">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
         <button
           onClick={back}
           className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center"
@@ -871,7 +871,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* Hero block */}
-      <div className="px-5 pt-5 pb-4">
+      <div className="px-5 md:px-8 pt-5 pb-4">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-12 h-12 rounded-2xl bg-clay-soft flex items-center justify-center">
             <cat.Icon size={22} className="text-clay" />
@@ -884,7 +884,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* Browse all */}
-      <div className="px-5 pb-3">
+      <div className="px-5 md:px-8 pb-3">
         <button
           onClick={() => go("category", { ...cat, subType: null })}
           className="w-full flex items-center justify-between p-3.5 rounded-xl border border-ink-10 bg-clay-soft active:bg-clay-soft"
@@ -903,8 +903,8 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* Sub-type / cuisine grid */}
-      <div className="px-5 pb-5">
-        <h3 className="text-[10px] font-semibold text-stone-w uppercase tracking-wider mb-2">
+      <div className="px-5 md:px-8 pb-5">
+        <h3 className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider mb-2">
           {isRestaurant ? "By cuisine" : "By type"}
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -927,7 +927,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* Ask Karibu nudge */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <button
           onClick={() => go("ask")}
           className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-ochre bg-ochre-soft text-left"
@@ -993,14 +993,14 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   return (
     <div className="fade-in pb-4">
       {/* Top bar */}
-      <div className="sticky top-0 bg-ivory z-10 px-5 pt-4 pb-3 border-b border-ink-10">
+      <div className="sticky top-0 bg-ivory z-10 px-5 md:px-8 pt-4 pb-3 border-b border-ink-10">
         <div className="flex items-center justify-between mb-3">
           <button onClick={back} className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center">
             <ChevronLeft size={17} className="text-ink" />
           </button>
           <div className="flex-1 text-center px-2">
             {subTypeLabel && (
-              <div className="text-[10px] font-semibold text-stone-w uppercase tracking-wider leading-tight">
+              <div className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider leading-tight">
                 {payload?.label}
               </div>
             )}
@@ -1030,7 +1030,7 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* Sort row */}
-      <div className="px-5 pt-3 pb-2 flex items-center gap-1.5 overflow-x-auto scroll-x">
+      <div className="px-5 md:px-8 pt-3 pb-2 flex items-center gap-1.5 overflow-x-auto scroll-x">
         <span className="text-xs text-stone-w pr-1">Sort:</span>
         {["Recommended", "Closest", "Top rated", "Open now"].map((s) => (
           <button
@@ -1048,7 +1048,7 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
       </div>
 
       {/* List */}
-      <div className="px-5 pt-2 space-y-3">
+      <div className="px-5 md:px-8 pt-2 space-y-3">
         {filtered.map((s) => (
           <button
             key={s.id}
@@ -1066,12 +1066,12 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
                 {/* Unknown open-state (live rows without hours data) shows neither */}
                 {s.openNow != null &&
                   (s.openNow ? (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-forest flex-shrink-0">
+                    <span className="flex items-center gap-1 text-[10px] md:text-xs font-semibold text-forest flex-shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-forest pulse-dot" />
                       Open
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-stone-w flex-shrink-0">Closed</span>
+                    <span className="text-[10px] md:text-xs font-semibold text-stone-w flex-shrink-0">Closed</span>
                   ))}
               </div>
               <p className="text-xs text-stone-w mt-0.5">{s.tagline}</p>
@@ -1218,7 +1218,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
 
       {/* "Review posted" banner */}
       {justPosted && (
-        <div className="px-5 py-2.5 bg-forest-soft border-b border-ink-10 flex items-center gap-2 fade-in">
+        <div className="px-5 md:px-8 py-2.5 bg-forest-soft border-b border-ink-10 flex items-center gap-2 fade-in">
           <Check size={15} className="text-forest" />
           <span className="text-xs font-semibold text-forest">
             Thanks — your review is live. Others will see it after moderation.
@@ -1227,7 +1227,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       )}
 
       {/* Name block */}
-      <div className="px-5 pt-4 pb-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-4 border-b border-ink-10">
         <h1 className="font-serif-d text-3xl text-ink leading-tight">{full.name}</h1>
         <p className="text-sm text-stone-w mt-0.5">{full.category} · {full.hood}</p>
         <div className="flex items-center gap-2 mt-2">
@@ -1256,7 +1256,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* Action row */}
-      <div className="px-5 py-4 grid grid-cols-4 gap-2 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 grid grid-cols-4 gap-2 border-b border-ink-10">
         {[
           { label: "Call", Icon: Phone, color: "#2A3D2B" },
           { label: "WhatsApp", Icon: MessageCircle, color: "#2A3D2B" },
@@ -1274,7 +1274,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* About */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <h3 className="font-serif-d text-lg text-ink mb-1.5">About</h3>
         <p className="text-sm text-ink leading-relaxed">{full.about}</p>
         <div className="flex flex-wrap gap-1.5 mt-3">
@@ -1290,7 +1290,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* Services */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <h3 className="font-serif-d text-lg text-ink mb-2">Services & prices</h3>
         <div className="space-y-1.5">
           {full.services?.map((s, i) => (
@@ -1303,7 +1303,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* Hours + payment */}
-      <div className="px-5 py-4 border-b border-ink-10 space-y-3">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10 space-y-3">
         <div className="flex items-start gap-3">
           <Clock size={17} className="text-stone-w flex-shrink-0 mt-0.5" />
           <div>
@@ -1321,7 +1321,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* Reviews summary */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <div className="flex items-baseline justify-between mb-3">
           <h3 className="font-serif-d text-lg text-ink">Reviews</h3>
           <button
@@ -1342,19 +1342,19 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
             <div className="mt-1">
               <StarRow rating={liveRating} size={12} />
             </div>
-            <div className="text-[10px] text-stone-w mt-1">
+            <div className="text-[10px] md:text-xs text-stone-w mt-1">
               {totalCount.toLocaleString()} reviews
             </div>
           </div>
           <div className="flex-1 space-y-1">
             {distribution.map((d) => (
               <div key={d.stars} className="flex items-center gap-2">
-                <span className="text-[10px] text-stone-w w-2">{d.stars}</span>
+                <span className="text-[10px] md:text-xs text-stone-w w-2">{d.stars}</span>
                 <Star size={9} className="fill-current text-ochre" />
                 <div className="flex-1 h-1.5 rounded-full bg-white overflow-hidden">
                   <div className="h-full bg-ochre" style={{ width: `${d.pct}%` }} />
                 </div>
-                <span className="text-[10px] text-stone-w w-7 text-right">{d.pct}%</span>
+                <span className="text-[10px] md:text-xs text-stone-w w-7 text-right">{d.pct}%</span>
               </div>
             ))}
           </div>
@@ -1372,7 +1372,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
               {r.isNew && (
                 <div className="flex items-center gap-1 mb-1.5">
                   <Sparkles size={10} className="text-ochre-d" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-ochre-d">
+                  <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-ochre-d">
                     Just posted
                   </span>
                 </div>
@@ -1390,11 +1390,11 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
               {r.recommendation && (
                 <div className="mt-1 mb-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-ink-10">
                   <ThumbsUp size={10} className="text-forest" />
-                  <span className="text-[10px] font-medium text-ink">{r.recommendation}</span>
+                  <span className="text-[10px] md:text-xs font-medium text-ink">{r.recommendation}</span>
                 </div>
               )}
               {r.serviceUsed && (
-                <div className="text-[10px] text-stone-w mb-1.5">
+                <div className="text-[10px] md:text-xs text-stone-w mb-1.5">
                   Service used: <span className="text-ink font-medium">{r.serviceUsed}</span>
                 </div>
               )}
@@ -1408,7 +1408,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
       </div>
 
       {/* Write-a-review nudge at bottom */}
-      <div className="px-5 pt-4">
+      <div className="px-5 md:px-8 pt-4">
         <button
           onClick={() => go("review_compose", full)}
           className="w-full rounded-xl p-4 border border-ink-10 bg-clay-soft flex items-center gap-3 text-left"
@@ -1518,7 +1518,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
   return (
     <div className="fade-in pb-6">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
         <button
           onClick={back}
           className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center"
@@ -1530,7 +1530,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Business card */}
-      <div className="px-5 pt-4 pb-3 flex items-center gap-3">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
           <HeroImage variant={biz.image || "posh"} />
         </div>
@@ -1541,7 +1541,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Rating */}
-      <div className="px-5 pt-5 pb-5 text-center border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-5 pb-5 text-center border-b border-ink-10">
         <div className="text-xs font-semibold text-stone-w uppercase tracking-wider mb-3">
           How was it?
         </div>
@@ -1570,7 +1570,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Service used */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <div className="text-xs font-semibold text-stone-w uppercase tracking-wider mb-2">
           What did you get?
         </div>
@@ -1602,7 +1602,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Recommendation */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <div className="text-xs font-semibold text-stone-w uppercase tracking-wider mb-2">
           Would you recommend to other visitors?
         </div>
@@ -1629,7 +1629,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Text */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <div className="flex items-baseline justify-between mb-2">
           <div className="text-xs font-semibold text-stone-w uppercase tracking-wider">
             Tell us more
@@ -1650,7 +1650,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Context */}
-      <div className="px-5 py-4 border-b border-ink-10 space-y-3">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10 space-y-3">
         <div className="text-xs font-semibold text-stone-w uppercase tracking-wider">
           Your context
           <span className="ml-1 text-stone-w normal-case font-normal tracking-normal">
@@ -1680,7 +1680,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Photo upload placeholder */}
-      <div className="px-5 py-4 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
         <button className="w-full py-3 rounded-xl border border-dashed border-ink-20 flex items-center justify-center gap-2 text-xs text-stone-w">
           <Camera size={15} />
           <span>Add photos (optional)</span>
@@ -1688,7 +1688,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
       </div>
 
       {/* Guidelines + submit */}
-      <div className="px-5 py-4">
+      <div className="px-5 md:px-8 py-4">
         <p className="text-[11px] text-stone-w mb-3 leading-relaxed">
           By submitting, you agree to Karibu's review guidelines. Reviews are moderated for authenticity — first-person experiences only, no promotional content. Fake reviews lead to account removal.
         </p>
@@ -1761,7 +1761,7 @@ const BusinessSignupScreen = ({ back }) => {
   return (
     <div className="fade-in pb-6">
       {/* Hero */}
-      <div className="relative bg-forest px-5 pt-5 pb-7 text-white overflow-hidden">
+      <div className="relative bg-forest px-5 md:px-8 pt-5 pb-7 text-white overflow-hidden">
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -1792,22 +1792,22 @@ const BusinessSignupScreen = ({ back }) => {
           <div className="flex gap-4 mt-4">
             <div>
               <div className="font-serif-d text-2xl text-ochre">28k+</div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Monthly visitors</div>
+              <div className="text-[10px] md:text-xs uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Monthly visitors</div>
             </div>
             <div>
               <div className="font-serif-d text-2xl text-ochre">2.4k</div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Listed businesses</div>
+              <div className="text-[10px] md:text-xs uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Listed businesses</div>
             </div>
             <div>
               <div className="font-serif-d text-2xl text-ochre">41%</div>
-              <div className="text-[10px] uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Bookings uplift*</div>
+              <div className="text-[10px] md:text-xs uppercase tracking-wider" style={{ color: "#D7CFC4" }}>Bookings uplift*</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tiers */}
-      <div className="px-5 pt-5 pb-2">
+      <div className="px-5 md:px-8 pt-5 pb-2">
         <h3 className="font-serif-d text-xl text-ink mb-3">Choose your plan</h3>
         <div className="space-y-3">
           {tiers.map((t) => (
@@ -1847,7 +1847,7 @@ const BusinessSignupScreen = ({ back }) => {
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-stone-w mt-3 leading-relaxed">
+        <p className="text-[10px] md:text-xs text-stone-w mt-3 leading-relaxed">
           * Average reported uplift from Recommended businesses in the first 90 days. All prices inclusive of 16% VAT. M-Pesa and card billing. Cancel anytime.
         </p>
       </div>
@@ -1866,7 +1866,7 @@ const BusinessSignupScreen = ({ back }) => {
       </div>
 
       {/* Quality standards */}
-      <div className="px-5 mt-4">
+      <div className="px-5 md:px-8 mt-4">
         <div className="rounded-2xl border border-ink-10 bg-white overflow-hidden">
           <div className="px-4 pt-4 pb-3 bg-forest-soft border-b border-ink-10">
             <div className="flex items-center gap-2">
@@ -1934,7 +1934,7 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
   const { cities } = useReferenceData();
   return (
     <div className="fade-in">
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
         <button
           onClick={back}
           className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center"
@@ -1945,14 +1945,14 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
         <span className="w-8" />
       </div>
 
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 md:px-8 pt-5 pb-3">
         <h3 className="font-serif-d text-2xl text-ink leading-tight">Where in Kenya<br />are you?</h3>
         <p className="text-xs text-stone-w mt-2 leading-relaxed">
           We show services, businesses, and AI recommendations based on your city. You can switch any time.
         </p>
       </div>
 
-      <div className="px-5 pb-5 space-y-2">
+      <div className="px-5 md:px-8 pb-5 space-y-2">
         {cities.map((c) => {
           const isActive = c.key === activeCity;
           return (
@@ -1978,7 +1978,7 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
         })}
       </div>
 
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <div className="p-3 rounded-xl bg-forest-soft border border-ink-10 flex items-start gap-2">
           <Sparkles size={13} className="text-forest flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-ink leading-relaxed">
@@ -2056,7 +2056,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
   return (
     <div className="fade-in flex flex-col h-full">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
         <button
           onClick={back}
           className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center"
@@ -2079,7 +2079,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
       </div>
 
       {/* Messages / empty state */}
-      <div className="flex-1 overflow-y-auto hide-scroll px-5 py-4">
+      <div className="flex-1 overflow-y-auto hide-scroll px-5 md:px-8 py-4">
         {messages.length === 0 ? (
           <div className="fade-in">
             <div className="text-center py-4 mb-4">
@@ -2094,7 +2094,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
               </p>
             </div>
             <div className="space-y-2">
-              <div className="text-[10px] font-semibold text-stone-w uppercase tracking-wider mb-1">
+              <div className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider mb-1">
                 Try asking
               </div>
               {examplePrompts.map((p, i) => (
@@ -2125,7 +2125,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
                   {m.role === "assistant" && (
                     <div className="flex items-center gap-1 mb-1.5">
                       <Sparkles size={10} className="text-ochre-d" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-ochre-d">
+                      <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-ochre-d">
                         Karibu AI
                       </span>
                     </div>
@@ -2188,7 +2188,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
             />
           </button>
         </div>
-        <p className="text-[10px] text-stone-w text-center mt-1.5 leading-tight">
+        <p className="text-[10px] md:text-xs text-stone-w text-center mt-1.5 leading-tight">
           Karibu AI only recommends verified businesses · Can make mistakes
         </p>
       </div>
@@ -2237,7 +2237,7 @@ const MerchantDashboardScreen = ({ back }) => {
   return (
     <div className="fade-in pb-6">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center justify-between border-b border-ink-10">
         <button
           onClick={back}
           className="w-8 h-8 rounded-full border border-ink-10 flex items-center justify-center"
@@ -2251,7 +2251,7 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Business header */}
-      <div className="px-5 pt-5 pb-4">
+      <div className="px-5 md:px-8 pt-5 pb-4">
         <div className="text-xs font-semibold text-ochre-d uppercase tracking-wider">
           {biz.tier}
         </div>
@@ -2277,10 +2277,10 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Rating + rank */}
-      <div className="px-5 pb-4">
+      <div className="px-5 md:px-8 pb-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-2xl border border-ink-10 bg-white">
-            <div className="text-[10px] font-semibold text-stone-w uppercase tracking-wider">
+            <div className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider">
               Rating
             </div>
             <div className="flex items-baseline gap-1 mt-1">
@@ -2290,7 +2290,7 @@ const MerchantDashboardScreen = ({ back }) => {
             <div className="mt-1">
               <StarRow rating={biz.rating} size={10} />
             </div>
-            <div className="text-[10px] text-stone-w mt-1">{biz.reviews} reviews</div>
+            <div className="text-[10px] md:text-xs text-stone-w mt-1">{biz.reviews} reviews</div>
 
             {/* Sparkline */}
             <svg viewBox="0 0 80 24" className="w-full mt-2 h-6">
@@ -2312,17 +2312,17 @@ const MerchantDashboardScreen = ({ back }) => {
           </div>
 
           <div className="p-4 rounded-2xl border border-ochre bg-ochre-soft">
-            <div className="text-[10px] font-semibold text-ochre-d uppercase tracking-wider">
+            <div className="text-[10px] md:text-xs font-semibold text-ochre-d uppercase tracking-wider">
               Category rank
             </div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="font-serif-d text-3xl text-ink leading-none">#{biz.rank}</span>
               <span className="text-xs text-stone-w">/ {biz.totalInCat}</span>
             </div>
-            <div className="text-[10px] text-stone-w mt-1">{biz.hood}</div>
+            <div className="text-[10px] md:text-xs text-stone-w mt-1">{biz.hood}</div>
             <div className="mt-2 flex items-center gap-1">
               <Trophy size={11} className="text-ochre" />
-              <span className="text-[10px] font-semibold text-ochre-d">
+              <span className="text-[10px] md:text-xs font-semibold text-ochre-d">
                 Top 3 this month
               </span>
             </div>
@@ -2331,19 +2331,19 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Metrics grid */}
-      <div className="px-5 pb-4">
+      <div className="px-5 md:px-8 pb-4">
         <div className="flex items-baseline justify-between mb-2">
           <h3 className="font-serif-d text-lg text-ink">Activity</h3>
-          <span className="text-[10px] text-stone-w uppercase tracking-wider">Last 30 days</span>
+          <span className="text-[10px] md:text-xs text-stone-w uppercase tracking-wider">Last 30 days</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {metrics.map((m) => (
             <div key={m.label} className="p-3 rounded-xl border border-ink-10 bg-white">
-              <div className="text-[10px] text-stone-w">{m.label}</div>
+              <div className="text-[10px] md:text-xs text-stone-w">{m.label}</div>
               <div className="flex items-baseline gap-1.5 mt-1">
                 <span className="font-serif-d text-2xl text-ink leading-none">{m.value}</span>
                 <span
-                  className={`text-[10px] font-semibold inline-flex items-center gap-0.5 ${
+                  className={`text-[10px] md:text-xs font-semibold inline-flex items-center gap-0.5 ${
                     m.trend === "up" ? "text-forest" : "text-clay"
                   }`}
                 >
@@ -2357,10 +2357,10 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Review themes */}
-      <div className="px-5 pb-4">
+      <div className="px-5 md:px-8 pb-4">
         <h3 className="font-serif-d text-lg text-ink mb-2">What reviewers mention</h3>
         <div className="p-3 rounded-xl border border-ink-10 bg-white">
-          <div className="text-[10px] font-semibold text-stone-w uppercase tracking-wider mb-2">
+          <div className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider mb-2">
             Top themes · last 90 days
           </div>
           <div className="space-y-1.5">
@@ -2374,7 +2374,7 @@ const MerchantDashboardScreen = ({ back }) => {
                     }`}
                   />
                   <span className="text-xs text-ink flex-1">{t.label}</span>
-                  <span className="text-[10px] text-stone-w">{t.count}</span>
+                  <span className="text-[10px] md:text-xs text-stone-w">{t.count}</span>
                 </div>
               );
             })}
@@ -2389,7 +2389,7 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Recent reviews */}
-      <div className="px-5 pb-4">
+      <div className="px-5 md:px-8 pb-4">
         <div className="flex items-baseline justify-between mb-2">
           <h3 className="font-serif-d text-lg text-ink">Recent reviews</h3>
           <button className="text-xs text-clay font-semibold">See all</button>
@@ -2407,7 +2407,7 @@ const MerchantDashboardScreen = ({ back }) => {
               <p className="text-xs text-stone-w italic">"{r.snippet}"</p>
               <div className="mt-2 flex items-center gap-2">
                 {r.responded ? (
-                  <span className="text-[10px] text-forest font-semibold flex items-center gap-1">
+                  <span className="text-[10px] md:text-xs text-forest font-semibold flex items-center gap-1">
                     <Check size={10} />
                     Responded
                   </span>
@@ -2424,7 +2424,7 @@ const MerchantDashboardScreen = ({ back }) => {
       </div>
 
       {/* Subscription */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <div className="p-4 rounded-2xl border border-ink-10 bg-ivory-2">
           <div className="flex items-center gap-2 mb-2">
             <CircleDollarSign size={15} className="text-forest" />
@@ -2460,7 +2460,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
   return (
     <div className="fade-in pb-6">
       {/* Top bar */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-5 md:px-8 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-forest flex items-center justify-center">
             <BookOpen size={14} className="text-white" />
@@ -2473,7 +2473,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
       </div>
 
       {/* Editorial intro */}
-      <div className="px-5 pt-4 pb-5">
+      <div className="px-5 md:px-8 pt-4 pb-5">
         <div className="text-xs font-semibold text-stone-w uppercase tracking-wider mb-1">
           {cityLabel} · Visitor library
         </div>
@@ -2488,11 +2488,11 @@ const GuidesHubScreen = ({ go, activeCity }) => {
 
       {/* Featured articles */}
       <div className="pb-6">
-        <div className="px-5 flex items-baseline justify-between mb-3">
+        <div className="px-5 md:px-8 flex items-baseline justify-between mb-3">
           <h3 className="font-serif-d text-lg text-ink">Featured</h3>
-          <span className="text-[10px] font-semibold text-stone-w uppercase tracking-wider">Start here</span>
+          <span className="text-[10px] md:text-xs font-semibold text-stone-w uppercase tracking-wider">Start here</span>
         </div>
-        <div className="flex gap-3 overflow-x-auto scroll-x px-5 pb-1">
+        <div className="flex gap-3 overflow-x-auto scroll-x px-5 md:px-8 pb-1">
           {featured.map((g) => {
             const cat = guideCategories.find((c) => c.key === g.category);
             return (
@@ -2505,7 +2505,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
                   <HeroImage variant={g.heroVariant} />
                   <div className="absolute top-2 left-2">
                     <span
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold backdrop-blur"
                       style={{ backgroundColor: "rgba(247,241,232,0.85)", color: cat?.color }}
                     >
                       <cat.Icon size={10} />
@@ -2516,7 +2516,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
                 <div className="p-3">
                   <h4 className="font-serif-d text-base text-ink leading-tight">{g.title}</h4>
                   <p className="text-[11px] text-stone-w mt-1 leading-snug line-clamp-2">{g.subtitle}</p>
-                  <div className="flex items-center gap-2 mt-2 text-[10px] text-stone-w">
+                  <div className="flex items-center gap-2 mt-2 text-[10px] md:text-xs text-stone-w">
                     <Clock size={10} />
                     <span>{g.readTime} min read</span>
                     <span>·</span>
@@ -2530,7 +2530,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
       </div>
 
       {/* Category grid */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">Browse by topic</h3>
         <div className="grid grid-cols-2 gap-2.5">
           {byCategory.map((cat) => (
@@ -2547,8 +2547,8 @@ const GuidesHubScreen = ({ go, activeCity }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-xs text-ink leading-tight">{cat.label}</div>
-                <div className="text-[10px] text-stone-w mt-0.5 leading-tight">{cat.blurb}</div>
-                <div className="text-[10px] text-stone-w mt-1">
+                <div className="text-[10px] md:text-xs text-stone-w mt-0.5 leading-tight">{cat.blurb}</div>
+                <div className="text-[10px] md:text-xs text-stone-w mt-1">
                   {cat.articles.length} article{cat.articles.length === 1 ? "" : "s"}
                 </div>
               </div>
@@ -2558,7 +2558,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
       </div>
 
       {/* All articles list */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <h3 className="font-serif-d text-lg text-ink mb-3">All guides</h3>
         <div className="space-y-2">
           {guideList.map((g) => {
@@ -2578,7 +2578,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm text-ink leading-tight">{g.title}</div>
                   <div className="text-[11px] text-stone-w mt-0.5 leading-snug">{g.subtitle}</div>
-                  <div className="flex items-center gap-2 mt-1.5 text-[10px] text-stone-w">
+                  <div className="flex items-center gap-2 mt-1.5 text-[10px] md:text-xs text-stone-w">
                     <span style={{ color: cat.color }}>{cat.label}</span>
                     <span>·</span>
                     <Clock size={9} />
@@ -2593,7 +2593,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
       </div>
 
       {/* Ask Karibu nudge */}
-      <div className="px-5 pb-6">
+      <div className="px-5 md:px-8 pb-6">
         <button
           onClick={() => go("ask")}
           className="w-full flex items-center gap-3 p-4 rounded-2xl border border-ochre bg-ochre-soft text-left"
@@ -2668,7 +2668,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
         </div>
         <div className="absolute bottom-3 left-4">
           <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold backdrop-blur"
             style={{ backgroundColor: "rgba(247,241,232,0.90)", color: cat?.color }}
           >
             <cat.Icon size={10} />
@@ -2678,7 +2678,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
       </div>
 
       {/* Title block */}
-      <div className="px-5 pt-5 pb-3 border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-5 pb-3 border-b border-ink-10">
         <h1 className="font-serif-d text-3xl text-ink leading-tight">{g.title}</h1>
         <p className="font-serif-d italic text-base text-stone-w leading-snug mt-2">
           {g.subtitle}
@@ -2694,14 +2694,14 @@ const GuideArticleScreen = ({ payload, back, go }) => {
       </div>
 
       {/* Summary pullquote */}
-      <div className="px-5 py-4 border-b border-ink-10 bg-ivory-2">
+      <div className="px-5 md:px-8 py-4 border-b border-ink-10 bg-ivory-2">
         <p className="font-serif-d text-base text-ink leading-snug italic">
           {g.summary}
         </p>
       </div>
 
       {/* Article body */}
-      <div className="px-5 py-5 border-b border-ink-10">
+      <div className="px-5 md:px-8 py-5 border-b border-ink-10">
         {body.length === 0 && bodyLoading && (
           // Quiet, on-brand placeholder — the article's own palette, no spinner.
           <div className="space-y-2.5" aria-hidden="true">
@@ -2765,7 +2765,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
 
       {/* Related businesses */}
       {relatedBiz.length > 0 && (
-        <div className="px-5 py-4 border-b border-ink-10">
+        <div className="px-5 md:px-8 py-4 border-b border-ink-10">
           <h3 className="font-serif-d text-lg text-ink mb-2">Mentioned in this guide</h3>
           <div className="space-y-2">
             {relatedBiz.map((b) => (
@@ -2797,7 +2797,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
 
       {/* Ask Karibu about this */}
       {g.askPrompts && g.askPrompts.length > 0 && (
-        <div className="px-5 py-4 border-b border-ink-10">
+        <div className="px-5 md:px-8 py-4 border-b border-ink-10">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-7 h-7 rounded-full bg-ochre flex items-center justify-center">
               <Sparkles size={13} className="text-white" />
@@ -2819,7 +2819,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
       )}
 
       {/* More in this category */}
-      <div className="px-5 py-4">
+      <div className="px-5 md:px-8 py-4">
         <h3 className="font-serif-d text-lg text-ink mb-2">More from {cat.label}</h3>
         <div className="space-y-2">
           {guideList
@@ -2867,7 +2867,7 @@ const SearchScreen = ({ back, go }) => {
   ];
   return (
     <div className="fade-in">
-      <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-ink-10">
+      <div className="px-5 md:px-8 pt-4 pb-3 flex items-center gap-2 border-b border-ink-10">
         <button onClick={back} className="w-8 h-8 flex items-center justify-center">
           <ChevronLeft size={18} className="text-ink" />
         </button>
@@ -2882,7 +2882,7 @@ const SearchScreen = ({ back, go }) => {
           />
         </div>
       </div>
-      <div className="px-5 pt-4">
+      <div className="px-5 md:px-8 pt-4">
         <h4 className="text-xs font-semibold text-stone-w uppercase tracking-wider mb-2">Popular searches</h4>
         <div className="space-y-1">
           {suggestions
@@ -2925,7 +2925,7 @@ const BottomNav = ({ active, go }) => {
   ];
   return (
     <div
-      className="border-t border-ink-10 bg-ivory grid grid-cols-5 flex-shrink-0"
+      className="border-t border-ink-10 bg-ivory grid grid-cols-5 flex-shrink-0 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {items.map(({ key, label, Icon }) => (
@@ -2936,7 +2936,7 @@ const BottomNav = ({ active, go }) => {
         >
           <Icon size={19} className={active === key ? "text-clay" : "text-stone-w"} />
           <span
-            className={`text-[10px] mt-0.5 ${
+            className={`text-[10px] md:text-xs mt-0.5 ${
               active === key ? "text-clay font-semibold" : "text-stone-w"
             }`}
           >
@@ -2944,6 +2944,46 @@ const BottomNav = ({ active, go }) => {
           </span>
         </button>
       ))}
+    </div>
+  );
+};
+
+// ---------- DESKTOP NAV (md+) ----------
+// The bottom tab bar is a mobile pattern. On tablet/desktop we surface the same
+// five destinations as a top navigation bar and hide the bottom bar (md:hidden),
+// so the wide layout gets proper app chrome instead of a stranded mobile row.
+const DesktopNav = ({ active, go }) => {
+  const items = [
+    { key: "discover", label: "Discover", Icon: Compass },
+    { key: "guides", label: "Guides", Icon: BookOpen },
+    { key: "saved", label: "Saved", Icon: Bookmark },
+    { key: "business_signup", label: "Business", Icon: Briefcase },
+    { key: "profile", label: "Profile", Icon: User },
+  ];
+  return (
+    <div className="hidden md:flex items-center justify-between border-b border-ink-10 bg-ivory px-8 py-3 flex-shrink-0">
+      <button
+        onClick={() => go("discover")}
+        className="font-serif-d text-2xl text-clay leading-none"
+      >
+        Karibu
+      </button>
+      <nav className="flex items-center gap-1">
+        {items.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            onClick={() => go(key)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition ${
+              active === key
+                ? "bg-clay-soft text-clay"
+                : "text-stone-w hover:text-ink hover:bg-black/5"
+            }`}
+          >
+            <Icon size={17} className={active === key ? "text-clay" : "text-stone-w"} />
+            {label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 };
@@ -3086,9 +3126,13 @@ export default function Karibu() {
             The definite height here is what lets the screens that use h-full
             (AskKaribuScreen, PlaceholderScreen) resolve against the flex row. */}
         <div
-          className="mx-auto w-full max-w-sm h-full flex flex-col overflow-hidden"
+          className="mx-auto w-full max-w-sm md:max-w-2xl lg:max-w-5xl xl:max-w-6xl h-full flex flex-col overflow-hidden"
           style={{ backgroundColor: "#F7F1E8", paddingTop: "env(safe-area-inset-top)" }}
         >
+          {/* Desktop top nav (md+); the mobile bottom bar below is its counterpart.
+              Both are hidden for the full-screen flows. */}
+          {!hideBottomNav && <DesktopNav active={activeTab} go={goTab} />}
+
           {/* Screen content (scrollable) */}
           <div className="flex-1 min-h-0 overflow-y-auto hide-scroll">
             {renderScreen()}
