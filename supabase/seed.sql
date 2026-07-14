@@ -347,3 +347,215 @@ VALUES
     true, TIMESTAMPTZ '2026-04-01 00:00:00+00', TIMESTAMPTZ '2026-04-01 00:00:00+00'
   )
 ON CONFLICT (slug) DO NOTHING;
+
+-- ===========================================================================
+-- NAIROBI REAL BUSINESSES (research-sourced candidate listings)
+--
+-- Source: docs/research/2026-07-14-nairobi-businesses-sourcing.md — 32 real
+-- Nairobi businesses (salons/beauty, restaurants, rides/transport) gathered by
+-- web research, each traced to a public source URL. These are seeded as
+-- CANDIDATE listings pending the team's own manual verification.
+--
+-- TRUST GUARDRAILS (do not relax without a product decision):
+--   * Every row is tier='free', status='active'. NONE are verified/recommended.
+--   * NO reviews are seeded and rating/review_count/ranking_score are left at
+--     their schema defaults (0). We do not fabricate ratings.
+--   * No data is invented. Unverified fields (phone/whatsapp/email/website/
+--     address) are left NULL. price_range/tags/hours are omitted entirely
+--     because the research captured no structured values for them.
+--   * `location` is intentionally omitted (NULL). The research captured no
+--     reliable coordinates, and the column is nullable (see
+--     20260710170000_move_postgis_out_of_public.sql, which also notes it is
+--     NULL on every row). Geocode real addresses in a later data migration.
+--
+-- EXCLUDED as duplicates of prototype rows already seeded above (same real
+-- brand): "The Talisman" (=the-talisman), "Artcaffe Coffee & Bakery"
+-- (=artcaffe-westgate), "Ashleys Coiffure & Spa" (=ashleys), "Posh Palace
+-- Hair Studio & Spa" (=posh-palace-salon). Those 4 of the 32 are NOT
+-- re-inserted here to avoid duplicate listings; the team should reconcile the
+-- placeholder rows (which carry fabricated ratings/tiers) with this real data.
+--
+-- CHAINS are seeded as ONE flagship/HQ listing each (Serenity Spa, Blossom
+-- Spa, Java House, Le Grenier a Pain), not per-branch.
+--
+-- HOOD MAPPING: `hood` is NOT NULL and must be one of Nairobi's hoods[]
+-- (Westlands, Karen, Kilimani, Lavington, CBD, Parklands). Businesses whose
+-- real neighbourhood is outside that set are mapped to the closest present
+-- hood and flagged inline below (Langata/Nairobi West -> Karen; Gigiri branch
+-- -> Karen (a real Serenity branch that IS in the array); Ongata Rongai ->
+-- Karen; JKIA/airport -> CBD; app-based/city-wide -> operator base or CBD).
+--
+-- SUB-TYPE MAPPING: barbershops -> beauty/hair (no barber sub_type exists);
+-- ride-hailing apps -> transport/taxi (no ride-hailing sub_type); car-rental
+-- firms -> transport with sub_type NULL (no car-hire sub_type); safari/tour
+-- operators -> the `safari` category with sub_type NULL (that category has no
+-- sub_types). cuisine_type is set only for `restaurants` rows.
+-- ===========================================================================
+INSERT INTO businesses
+  (slug, name, category_id, sub_type_id, cuisine_type, city_id, hood, address, about,
+   phone, whatsapp, email, website, tier, status)
+SELECT
+  v.slug, v.name,
+  (SELECT id FROM categories WHERE slug = v.cat_slug),
+  (SELECT st.id FROM sub_types st
+     JOIN categories c ON c.id = st.category_id
+    WHERE c.slug = v.cat_slug AND st.slug = v.subtype_slug),
+  v.cuisine_type,
+  (SELECT id FROM cities WHERE slug = 'nairobi'),
+  v.hood, v.address, v.about,
+  v.phone, v.whatsapp, v.email, v.website, 'free', 'active'
+FROM (VALUES
+  -- ---- Salons / Beauty (8; Ashleys & Posh Palace excluded as dupes) --------
+  ('rapunzel-hair-affair', 'Rapunzel Hair Affair', 'beauty', 'hair', NULL::text,
+   'Westlands', '1st Floor, Soin Arcade, Westlands Road',
+   $b$Award-winning hair salon founded in 2014 by stylist Jayne Awino; good for cuts, treatments and styling.$b$,
+   '+254 722 833 465', NULL::text, 'rapunzelhairaffair@gmail.com', 'https://rapunzelhairaffair.com'),
+
+  -- hood Karen: flagship is Gigiri (not in hoods[]); Karen is a real Serenity branch present in the array
+  ('serenity-spa', 'Serenity Spa', 'beauty', 'spa', NULL,
+   'Karen', NULL,
+   $b$Established luxury day-spa group offering face and body treatments, nails, hair and laser; popular with the Gigiri diplomatic and expat community. Chain flagship listing.$b$,
+   NULL, NULL, 'info@serenityspa.co.ke', 'https://www.serenityspa.co.ke'),
+
+  ('blossom-spa', 'Blossom Spa', 'beauty', 'spa', NULL,
+   'Westlands', 'Rhapta Road, Gate 142, Westlands',
+   $b$Wellness spa offering massage, facials, mani/pedi, waxing and barber services across three Nairobi branches. Flagship (Westlands) listing.$b$,
+   '+254 720 507565', NULL, NULL, 'https://blossomspa-ke.com'),
+
+  -- barber -> beauty/hair (no barber sub_type exists)
+  ('barber-kings-kenya', 'Barber Kings Kenya', 'beauty', 'hair', NULL,
+   'Westlands', '1st Floor / Mezzanine, Soin Arcade, Westlands Road',
+   $b$Well-known premium barbershop for fades, beard work and grooming; open long hours.$b$,
+   '+254 724 115325', NULL, NULL, 'https://barberkingskenya.co.ke'),
+
+  ('bloke-barbers', 'Bloke Barbers', 'beauty', 'hair', NULL,
+   'Westlands', 'Ambience Mall, Westlands',
+   $b$Modern men's barbershop known for clean fades and beard trims; open daily 8am to 9pm.$b$,
+   NULL, NULL, NULL, NULL),
+
+  ('pam-nail-polish', 'Pam Nail Polish', 'beauty', 'nails', NULL,
+   'Westlands', 'Kenrail Towers, Ring Road Parklands (opposite Movenpick); second branch at Kenwood House, Kimathi Street, CBD',
+   $b$Dedicated nail-care studio offering manicures, pedicures, gel and enhancements, with two branches.$b$,
+   '+254 743 379940', NULL, NULL, NULL),
+
+  ('auri-nail-spa', 'Auri Nail Spa', 'beauty', 'nails', NULL,
+   'CBD', 'Moi Avenue, Nairobi CBD',
+   $b$Nail salon in the city centre serving CBD, Westlands and Kilimani clients; manicures, pedicures and enhancements.$b$,
+   NULL, NULL, NULL, 'https://aurinailspa.com'),
+
+  ('primp-and-coddle', 'Primp & Coddle', 'beauty', 'nails', NULL,
+   'Westlands', '3rd Floor, Aly''s Centre, junction of Muthithi & Mpaka Road',
+   $b$Aesthetics-focused nail and beauty spa; upmarket.$b$,
+   '+254 723 065510', NULL, NULL, NULL),
+
+  -- ---- Restaurants (7; Talisman excluded as dupe) -------------------------
+  ('cultiva-kenya', 'Cultiva Kenya', 'restaurants', NULL, 'Farm-to-table',
+   'Karen', 'Pofu Road, off Bogani Road, Karen',
+   $b$Stylish farm-to-table garden restaurant using seasonal organic produce, with tasting menus; reservation recommended.$b$,
+   '+254 701 579 902', '+254 721 242 711', NULL, 'https://cultivakenya.com'),
+
+  -- hood Karen: real location is Langata / Nairobi West (not in hoods[]); Karen is the closest present
+  ('carnivore-restaurant', 'Carnivore Restaurant', 'restaurants', 'nyama_choma', 'Nyama choma / grill',
+   'Karen', 'Langata Road, Nairobi West',
+   $b$Iconic all-you-can-eat open-air meat grill run by the Tamarind Group; a classic Nairobi tourist experience with fixed-price dining.$b$,
+   '+254 20 514 1300', NULL, 'reservations.carnivore@tamarind.co.ke', 'https://tamarind.co.ke/carnivore'),
+
+  ('nyama-mama-delta', 'Nyama Mama (Delta)', 'restaurants', 'kenyan', 'Modern Kenyan',
+   'Westlands', 'Delta Towers / Delta Corner, Westlands',
+   $b$Fun modern-African diner reinventing Kenyan comfort food; an approachable introduction to local cuisine.$b$,
+   '+254 20 7602067', NULL, 'delta@nyamamama.com', NULL),
+
+  ('inti-nikkei', 'INTI - A Nikkei Experience', 'restaurants', NULL, 'Japanese-Peruvian (Nikkei)',
+   'Westlands', '20th Floor, One Africa Place, Waiyaki Way, Westlands',
+   $b$Africa's first Nikkei restaurant, serving sushi and ceviche with 360-degree city views; a date-night, upmarket spot.$b$,
+   '+254 735 065945', NULL, 'inti@thefoodlibrary.co.ke', 'https://www.thefoodlibrary.co.ke/inti-a-nikkei-experience'),
+
+  ('about-thyme', 'About Thyme', 'restaurants', NULL, 'Mediterranean / Asian / BBQ',
+   'Westlands', 'Eldama Ravine Road (near Karura Forest), Westlands',
+   $b$Long-running, chic-but-casual garden restaurant with a wide-ranging menu; popular with expats.$b$,
+   '+254 721 850026', NULL, NULL, 'http://about-thyme.com'),
+
+  ('habesha-ethiopian', 'Habesha Ethiopian Restaurant', 'restaurants', NULL, 'Ethiopian',
+   'Kilimani', 'Argwings Kodhek Road, near the Elgeyo Marakwet junction',
+   $b$Well-loved authentic Ethiopian restaurant serving injera and communal platters in a rustic setting.$b$,
+   '+254 733 314677', NULL, NULL, 'https://habesharestaurant.co.ke'),
+
+  ('open-house-restaurant', 'Open House Restaurant', 'restaurants', NULL, 'North Indian',
+   'Westlands', '1st Floor, Gallant Mall, Parklands Road, Westlands',
+   $b$Established North Indian restaurant, with a Karen branch too; reliable curries and tandoor.$b$,
+   '+254 735 621824', NULL, NULL, 'https://openhouserestaurant.co.ke'),
+
+  -- ---- Cafes (3; Artcaffe excluded as dupe) -------------------------------
+  ('tin-roof-cafe', 'Tin Roof Cafe', 'cafes', NULL, NULL,
+   'Karen', 'Karen hub; second site at Langata Link Shops, Langata',
+   $b$Healthy garden cafe serving salads, burgers, wraps and local coffee; family-friendly and casual.$b$,
+   '+254 719 606 621', NULL, 'eat@tinroof.cafe', 'https://www.tinroof.cafe'),
+
+  ('java-house', 'Java House', 'cafes', NULL, NULL,
+   'Westlands', 'Head office, ABC Place, Waiyaki Way, Westlands',
+   $b$Kenya's flagship coffee-house chain, established 1999, with 70+ branches; dependable all-day cafe food. Head-office listing.$b$,
+   '+254 709 283000', NULL, NULL, 'https://javahouseafrica.com'),
+
+  ('le-grenier-a-pain', 'Le Grenier a Pain', 'cafes', NULL, NULL,
+   'Westlands', 'Securex Building, 9 Riverside Drive',
+   $b$French artisan bakery and brasserie serving pastries, bread and brunch, with several branches. Flagship listing.$b$,
+   '+254 799 848118', NULL, NULL, 'https://www.legrenierapain.co.ke'),
+
+  -- ---- Rides / transport: ride-hailing, taxi, car hire (transport cat) -----
+  -- ride-hailing app -> transport/taxi (no ride-hailing sub_type)
+  ('little-cab', 'Little (Little Cab)', 'transport', 'taxi', NULL,
+   'Westlands', 'Craft Silicon Ltd, Westlands',
+   $b$Kenyan-built ride-hailing app, partnered with Safaricom, offering rides, delivery and in-app payments; a trusted local alternative to Uber and Bolt.$b$,
+   NULL, NULL, 'operations@little.africa', 'https://www.little.africa'),
+
+  -- hood CBD: city-wide app, no fixed premises; central default
+  ('faras', 'Faras', 'transport', 'taxi', NULL,
+   'CBD', NULL,
+   $b$Local NTSA-licensed ride-hailing app with M-Pesa integration and a loyalty programme; also offers car hire and delivery.$b$,
+   NULL, NULL, NULL, 'https://www.faras.com'),
+
+  ('kenatco-taxis', 'Kenatco Taxis', 'transport', 'taxi', NULL,
+   'CBD', NULL,
+   $b$Kenya's oldest taxi company, operating since the 1960s, and the regulated JKIA airport-transfer operator; chauffeur-driven with corporate accounts.$b$,
+   '+254 709 642000', '+254 795 638429', 'info@kenatco.co.ke', 'https://www.kenatco.co.ke'),
+
+  -- car hire -> transport with sub_type NULL (no car-hire sub_type)
+  ('market-car-hire', 'Market Car Hire', 'transport', NULL, NULL,
+   'CBD', NULL,
+   $b$Local car-rental firm with 130+ vehicles from saloons to 4x4s and buses; daily rental, long lease and airport transfers.$b$,
+   '+254 723 554283', NULL, 'info@marketcarhire.com', 'https://marketcarhire.com'),
+
+  -- hood CBD: JKIA desk (airport not in hoods[])
+  ('europcar-kenya', 'Europcar Kenya', 'transport', NULL, NULL,
+   'CBD', 'Desk at Jomo Kenyatta International Airport (JKIA)',
+   $b$Global car-rental brand with a desk at JKIA; standardised vehicles and predictable service for expats and tourists.$b$,
+   NULL, NULL, NULL, 'https://www.europcar.co.ke'),
+
+  ('avis-kenya', 'Avis Kenya', 'transport', NULL, NULL,
+   'CBD', 'Lifestyle Terraces, Chady Road, next to JKIA',
+   $b$International car-rental brand with several Nairobi locations, including next to JKIA; self-drive and chauffeur options.$b$,
+   '+254 758 583935', NULL, NULL, NULL),
+
+  -- ---- Rides / transport: safari & tour operators (safari cat, no sub_types) --
+  ('pollmans-tours-safaris', 'Pollman''s Tours & Safaris', 'safari', NULL, NULL,
+   'CBD', NULL,
+   $b$One of Kenya's oldest and most respected inbound tour operators, running since the 1950s; airport transfers and scheduled or tailor-made safaris.$b$,
+   NULL, NULL, 'info@pollmans.com', 'https://www.pollmans.com'),
+
+  ('bonfire-adventures', 'Bonfire Adventures', 'safari', NULL, NULL,
+   'CBD', 'Yala Towers, 4th Floor, junction of Koinange & Biashara Street',
+   $b$Large, well-known Kenyan tours and travel company offering domestic and international packages, transfers and safaris.$b$,
+   '+254 729 836336', NULL, 'deals@bonfireadventures.com', 'https://bonfireadventures.com'),
+
+  -- hood Karen: real location is Ongata Rongai (not in hoods[]); Karen is the closest present
+  ('gametrackers', 'Gametrackers (K) Ltd', 'safari', NULL, NULL,
+   'Karen', 'Lodge Road, off Magadi Road, Ongata Rongai',
+   $b$Long-established overland and adventure safari operator, running since 1981, with its own vehicle fleet across East Africa.$b$,
+   '+254 20 2222703', NULL, 'info@gametrackersafaris.com', 'https://gametrackersafaris.com'),
+
+  ('southern-cross-safaris', 'Southern Cross Safaris', 'safari', NULL, NULL,
+   'Karen', 'Bay Court, The Watermark Business Park, Ndege Road, Karen',
+   $b$Established destination-management and safari operator running a 70+ vehicle fleet; transfers and guided tours.$b$,
+   '+254 20 2434600', NULL, NULL, 'https://www.southerncrosssafaris.com')
+) AS v(slug, name, cat_slug, subtype_slug, cuisine_type, hood, address, about, phone, whatsapp, email, website)
+ON CONFLICT (slug) DO NOTHING;
