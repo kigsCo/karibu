@@ -9,7 +9,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-  { ignores: ["dist/**", "node_modules/**", "supabase/functions/**"] },
+  { ignores: ["dist/**", "node_modules/**", "supabase/functions/**", ".claude/worktrees/**"] },
   js.configs.recommended,
   {
     files: ["**/*.{js,jsx}"],
@@ -41,6 +41,15 @@ export default [
         "warn",
         { varsIgnorePattern: "^[A-Z_]", argsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    // Vitest globals (test, expect, vi, ...) for test files — the
+    // vitest.config.js `globals: true` option affects the test runtime only,
+    // not ESLint's static analysis, so it needs its own globals here.
+    files: ["**/*.{test,spec}.{js,jsx}", "src/test/**/*.{js,jsx}"],
+    languageOptions: {
+      globals: { ...globals.vitest },
     },
   },
 ];
