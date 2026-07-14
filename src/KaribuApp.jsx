@@ -31,13 +31,9 @@ import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
 // KAR-9: the `guides` constant below is the fallback; published guides come from
 // the `guides` table. Same contract — identical first paint, live data replaces it.
 import { useGuideDetail, useGuides } from "./hooks/useGuides.js";
-import GlobalStyles from "./components/GlobalStyles.jsx";
 import Badge from "./components/Badge.jsx";
 import StarRow from "./components/StarRow.jsx";
 import HeroImage from "./components/HeroImage.jsx";
-import PlaceholderScreen from "./components/PlaceholderScreen.jsx";
-import BottomNav from "./components/BottomNav.jsx";
-import DesktopNav from "./components/DesktopNav.jsx";
 
 // ---------- DATA ----------
 const visitorEssentials = [
@@ -437,7 +433,7 @@ const guides = [
   },
 ];
 // ---------- SCREEN: DISCOVER ----------
-const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
+export const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
   const { cities, categories } = useReferenceData();
   // KAR-6: the carousel reads the live top-ranked active businesses. Not
   // city-filtered — the prototype shows the same cards in every city, and an
@@ -730,7 +726,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
 };
 
 // ---------- SCREEN: SUB-CATEGORY PICKER ----------
-const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+export const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   const { cities } = useReferenceData();
   const cat = payload;
   if (!cat) return null;
@@ -837,7 +833,7 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 };
 
 // ---------- SCREEN: CATEGORY ----------
-const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
+export const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   const { cities } = useReferenceData();
   const city = cities.find((c) => c.key === activeCity) || cities[0];
   const hoods = [`All ${city.label}`, ...city.hoods];
@@ -1020,7 +1016,7 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
 };
 
 // ---------- SCREEN: BUSINESS DETAIL ----------
-const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
+export const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const b = payload || recommended[0];
   const [saved, setSaved] = useState(false);
 
@@ -1318,7 +1314,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
 };
 
 // ---------- SCREEN: REVIEW COMPOSER ----------
-const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
+export const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
   const biz = payload || recommended[0];
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -1595,7 +1591,7 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
 };
 
 // ---------- SCREEN: BUSINESS SIGNUP / PRICING ----------
-const BusinessSignupScreen = ({ back }) => {
+export const BusinessSignupScreen = ({ back }) => {
   const tiers = [
     {
       name: "Free Listing",
@@ -1818,7 +1814,7 @@ const BusinessSignupScreen = ({ back }) => {
 };
 
 // ---------- SCREEN: CITY PICKER ----------
-const CityPickerScreen = ({ back, activeCity, onSelect }) => {
+export const CityPickerScreen = ({ back, activeCity, onSelect }) => {
   const { cities } = useReferenceData();
   return (
     <div className="fade-in">
@@ -1879,7 +1875,7 @@ const CityPickerScreen = ({ back, activeCity, onSelect }) => {
 };
 
 // ---------- SCREEN: ASK KARIBU (AI search) ----------
-const AskKaribuScreen = ({ back, go, activeCity }) => {
+export const AskKaribuScreen = ({ back, go, activeCity }) => {
   const { cities } = useReferenceData();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -2085,7 +2081,7 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
 };
 
 // ---------- SCREEN: MERCHANT DASHBOARD ----------
-const MerchantDashboardScreen = ({ back }) => {
+export const MerchantDashboardScreen = ({ back }) => {
   // Mock business — would come from auth in production
   const biz = {
     name: "Posh Palace Salon",
@@ -2332,7 +2328,7 @@ const MerchantDashboardScreen = ({ back }) => {
 };
 
 // ---------- SCREEN: GUIDES HUB ----------
-const GuidesHubScreen = ({ go, activeCity }) => {
+export const GuidesHubScreen = ({ go, activeCity }) => {
   const { cities } = useReferenceData();
   // KAR-9: published guides from the DB; the prototype constant is the fallback.
   const { items: guideList } = useGuides({ fallback: guides });
@@ -2503,7 +2499,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
 };
 
 // ---------- SCREEN: GUIDE ARTICLE ----------
-const GuideArticleScreen = ({ payload, back, go }) => {
+export const GuideArticleScreen = ({ payload, back, go }) => {
   const fallbackGuide = payload || guides[0];
   // KAR-9: the list rows that route here carry no body (see useGuides), so the
   // article fetches its own. Until it lands, `fallbackGuide` is what renders —
@@ -2748,7 +2744,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
 };
 
 // ---------- SCREEN: SEARCH (lightweight) ----------
-const SearchScreen = ({ back, go }) => {
+export const SearchScreen = ({ back, go }) => {
   const [q, setQ] = useState("");
   const suggestions = [
     "Nails in Westlands",
@@ -2795,164 +2791,3 @@ const SearchScreen = ({ back, go }) => {
     </div>
   );
 };
-
-// ---------- APP ----------
-export default function Karibu() {
-  const [stack, setStack] = useState([{ screen: "discover", payload: null }]);
-  const [reviewsByBusiness, setReviewsByBusiness] = useState({});
-  const [justPostedFor, setJustPostedFor] = useState(null);
-  const [activeCity, setActiveCity] = useState("nairobi");
-  const current = stack[stack.length - 1];
-
-  const go = (screen, payload = null) => {
-    if (screen === "merchant_dashboard") {
-      setStack([{ screen: "merchant_dashboard", payload: null }]);
-      return;
-    }
-    setStack((s) => [...s, { screen, payload }]);
-  };
-  const back = () => {
-    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
-  };
-  const exitMerchant = () => {
-    setStack([{ screen: "discover", payload: null }]);
-  };
-  const goTab = (key) => {
-    setStack([{ screen: key, payload: null }]);
-  };
-
-  // Handle review submission: add to state, pop composer, show toast
-  const submitReview = (businessId, review) => {
-    setReviewsByBusiness((prev) => ({
-      ...prev,
-      [businessId]: [review, ...(prev[businessId] || [])],
-    }));
-    setJustPostedFor(businessId);
-    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
-    setTimeout(() => setJustPostedFor(null), 6000);
-  };
-
-  const handleCitySelect = (cityKey) => {
-    setActiveCity(cityKey);
-    // Pop the city picker off the stack
-    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
-  };
-
-  const renderScreen = () => {
-    switch (current.screen) {
-      case "discover":
-        return (
-          <DiscoverScreen
-            go={go}
-            activeCity={activeCity}
-            onOpenCityPicker={() => go("city_picker")}
-          />
-        );
-      case "category":
-        return <CategoryScreen payload={current.payload} go={go} back={back} activeCity={activeCity} />;
-      case "subcategory":
-        return <SubCategoryScreen payload={current.payload} go={go} back={back} activeCity={activeCity} />;
-      case "business": {
-        const bizId = current.payload?.id;
-        const biz = current.payload;
-        return (
-          <BusinessScreen
-            payload={biz}
-            back={back}
-            go={go}
-            reviews={bizId ? reviewsByBusiness[bizId] || [] : []}
-            justPosted={justPostedFor && justPostedFor === bizId}
-          />
-        );
-      }
-      case "review_compose":
-        return (
-          <ReviewComposerScreen
-            payload={current.payload}
-            back={back}
-            onSubmit={submitReview}
-          />
-        );
-      case "business_signup":
-        return <BusinessSignupScreen back={back} />;
-      case "city_picker":
-        return (
-          <CityPickerScreen
-            back={back}
-            activeCity={activeCity}
-            onSelect={handleCitySelect}
-          />
-        );
-      case "ask":
-        return <AskKaribuScreen back={back} go={go} activeCity={activeCity} />;
-      case "merchant_dashboard":
-        return <MerchantDashboardScreen back={exitMerchant} />;
-      case "guides":
-        return <GuidesHubScreen go={go} activeCity={activeCity} />;
-      case "guide_article":
-        // Key by guide id so navigating article→article (the "More from …" rail)
-        // remounts with fresh state instead of showing the previous guide's body
-        // until the new fetch lands.
-        return <GuideArticleScreen key={current.payload?.id} payload={current.payload} back={back} go={go} />;
-      case "search":
-        return <SearchScreen back={back} go={go} />;
-      case "saved":
-        return (
-          <PlaceholderScreen
-            title="Your saved places"
-            message="Tap the heart on any business to save it here for later. Great for building a short-list before a trip."
-          />
-        );
-      case "profile":
-        return (
-          <PlaceholderScreen
-            title="Your profile"
-            message="Sign in to sync your saved places across devices and leave reviews."
-          />
-        );
-      default:
-        return <DiscoverScreen go={go} activeCity={activeCity} onOpenCityPicker={() => go("city_picker")} />;
-    }
-  };
-
-  const activeTab = ["discover", "guides", "saved", "business_signup", "profile"].includes(current.screen)
-    ? current.screen
-    : stack[0]?.screen || "discover";
-
-  // Hide bottom nav for full-screen flows
-  const hideBottomNav = ["review_compose", "city_picker", "ask", "merchant_dashboard", "guide_article"].includes(current.screen);
-
-  return (
-    <>
-      <GlobalStyles />
-      <div
-        className="app-viewport font-sans-d text-ink kitenge-bg"
-        style={{
-          backgroundColor: "#EEE5D3",
-          paddingLeft: "env(safe-area-inset-left)",
-          paddingRight: "env(safe-area-inset-right)",
-        }}
-      >
-        {/* Full-bleed on mobile; centred in a mobile-width column on desktop.
-            The definite height here is what lets the screens that use h-full
-            (AskKaribuScreen, PlaceholderScreen) resolve against the flex row. */}
-        <div
-          className="w-full h-full flex flex-col overflow-hidden"
-          style={{ backgroundColor: "#F7F1E8", paddingTop: "env(safe-area-inset-top)" }}
-        >
-          {/* Desktop top nav (md+); the mobile bottom bar below is its counterpart.
-              Both are hidden for the full-screen flows. */}
-          {!hideBottomNav && <DesktopNav active={activeTab} go={goTab} />}
-
-          {/* Screen content (scrollable) */}
-          <div className="flex-1 min-h-0 overflow-y-auto hide-scroll">
-            {renderScreen()}
-          </div>
-
-          {/* Bottom nav (hidden for full-screen flows) */}
-          {!hideBottomNav && <BottomNav active={activeTab} go={goTab} />}
-        </div>
-      </div>
-    </>
-  );
-}
