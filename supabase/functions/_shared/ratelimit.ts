@@ -25,9 +25,12 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
  * Returns true if the request is ALLOWED (under the limit), false if it has
  * exceeded `max` hits for `key` from `ip` within the last `windowSeconds`.
  *
- * Records a hit when allowed. Uses the service-role client (bypasses RLS).
- * Fails OPEN on a DB error — a rate-limiter outage must not block legitimate
- * users; the DB constraints + RLS are still the hard backstop.
+ * Records the hit FIRST, then counts (the row just written included). Counting
+ * first would let N concurrent callers all read "under the limit" before any of
+ * them has written — which is exactly how a botnet slips past the global
+ * per-phone STK limit. Uses the service-role client (bypasses RLS). Fails OPEN
+ * on a DB error — a rate-limiter outage must not block legitimate users; the DB
+ * constraints + RLS are still the hard backstop.
  */
 export async function checkIpRateLimit(
   supabase: SupabaseClient,
@@ -38,6 +41,21 @@ export async function checkIpRateLimit(
 ): Promise<boolean> {
   try {
     const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+    // Record this attempt before counting, so requests racing the same bucket
+    // each observe the other's row. Not a hard guarantee (two PostgREST
+    // round-trips, not one transaction) but it closes the wide TOCTOU window a
+    // count-first check leaves open — the window a botnet uses to ring one
+    // phone from many IPs at once.
+    const { error: insertError } = await supabase
+      .from("rate_limits")
+      .insert({ ip, key });
+    if (insertError) {
+      // Couldn't record the hit, so we can't count it reliably either. Fail
+      // open, consistent with the count-error path below.
+      console.error("rate-limit insert failed (failing open):", insertError.message);
+      return true;
+    }
 
     const { count, error } = await supabase
       .from("rate_limits")
@@ -51,17 +69,9 @@ export async function checkIpRateLimit(
       return true;
     }
 
-    if ((count ?? 0) >= max) return false;
-
-    // Record this hit. Fire-and-forget-ish: a failure here shouldn't block.
-    const { error: insertError } = await supabase
-      .from("rate_limits")
-      .insert({ ip, key });
-    if (insertError) {
-      console.error("rate-limit insert failed:", insertError.message);
-    }
-
-    return true;
+    // `count` includes the row just inserted, so the Nth caller in the window
+    // sees N; allow up to and including `max`.
+    return (count ?? 0) <= max;
   } catch (e) {
     console.error("rate-limit unexpected error (failing open):", e);
     return true;

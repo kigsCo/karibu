@@ -210,6 +210,12 @@ const guideCategories = [
   { key: "health", label: "Health", Icon: HeartPulse, color: "#D4A341", blurb: "Vaccines, water, hospitals" },
 ];
 
+// Guides are now DB-driven editorial content, so a row's `category` is not
+// guaranteed to be one of the six keys above. Falling back keeps the category
+// chip (icon + label) rendering instead of throwing on `cat.Icon` / `cat.label`
+// when a guide carries an unmapped category.
+const GUIDE_CATEGORY_FALLBACK = { key: "", label: "Guide", Icon: BookOpen, color: "#6B7280", blurb: "" };
+
 const guides = [
   {
     id: "safety-nairobi",
@@ -768,7 +774,7 @@ const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
         </div>
         <div className="flex gap-3 overflow-x-auto scroll-x md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:overflow-visible px-5 md:px-8 pb-1">
           {liveGuides.filter((g) => g.featured).map((g) => {
-            const cat = guideCategories.find((c) => c.key === g.category);
+            const cat = (guideCategories.find((c) => c.key === g.category) || GUIDE_CATEGORY_FALLBACK);
             return (
               <button
                 key={g.id}
@@ -2494,7 +2500,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
         </div>
         <div className="flex gap-3 overflow-x-auto scroll-x px-5 md:px-8 pb-1">
           {featured.map((g) => {
-            const cat = guideCategories.find((c) => c.key === g.category);
+            const cat = (guideCategories.find((c) => c.key === g.category) || GUIDE_CATEGORY_FALLBACK);
             return (
               <button
                 key={g.id}
@@ -2562,7 +2568,7 @@ const GuidesHubScreen = ({ go, activeCity }) => {
         <h3 className="font-serif-d text-lg text-ink mb-3">All guides</h3>
         <div className="space-y-2">
           {guideList.map((g) => {
-            const cat = guideCategories.find((c) => c.key === g.category);
+            const cat = (guideCategories.find((c) => c.key === g.category) || GUIDE_CATEGORY_FALLBACK);
             return (
               <button
                 key={g.id}
@@ -2623,7 +2629,7 @@ const GuideArticleScreen = ({ payload, back, go }) => {
   const { items: guideList } = useGuides({ fallback: guides });
   const { guide, loading: bodyLoading } = useGuideDetail(fallbackGuide.id, fallbackGuide);
   const g = guide || fallbackGuide;
-  const cat = guideCategories.find((c) => c.key === g.category);
+  const cat = (guideCategories.find((c) => c.key === g.category) || GUIDE_CATEGORY_FALLBACK);
   const [saved, setSaved] = useState(false);
 
   // Find related businesses. A fallback guide lists prototype business ids; a
@@ -3087,7 +3093,10 @@ export default function Karibu() {
       case "guides":
         return <GuidesHubScreen go={go} activeCity={activeCity} />;
       case "guide_article":
-        return <GuideArticleScreen payload={current.payload} back={back} go={go} />;
+        // Key by guide id so navigating article→article (the "More from …" rail)
+        // remounts with fresh state instead of showing the previous guide's body
+        // until the new fetch lands.
+        return <GuideArticleScreen key={current.payload?.id} payload={current.payload} back={back} go={go} />;
       case "search":
         return <SearchScreen back={back} go={go} />;
       case "saved":
