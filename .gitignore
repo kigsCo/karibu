@@ -43,3 +43,5 @@ pnpm-debug.log*
 
 # Claude Code local settings (keep shared settings.json; ignore personal overrides)
 .claude/settings.local.json
+# Transient agent worktrees — never commit; keep tooling (eslint/vitest) from sweeping them
+.claude/worktrees/

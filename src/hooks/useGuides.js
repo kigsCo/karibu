@@ -83,7 +83,11 @@ export function useGuides({ fallback = [] } = {}) {
       .select(LIST_COLUMNS)
       .eq("is_published", true)
       .order("featured", { ascending: false })
-      .order("published_at", { ascending: true })
+      // `nullsFirst: false` keeps a published-but-undated guide from floating to
+      // an unpredictable spot; `slug` is a stable tiebreaker so the order is
+      // deterministic when two guides share featured + published_at.
+      .order("published_at", { ascending: true, nullsFirst: false })
+      .order("slug", { ascending: true })
       .then(({ data, error: qError }) => {
         if (cancelled) return;
         setLoading(false);
@@ -146,7 +150,12 @@ export function useGuideDetail(slug, fallback = null) {
         .in("id", ids)
         .eq("status", "active");
 
-      if (!bizError && bizRows) {
+      if (bizError) {
+        // Don't fail the whole article over its related-businesses rail, but
+        // don't swallow it either — the guide's own `error` only covers the
+        // guide fetch, so this would otherwise vanish silently.
+        console.warn("guide related-businesses fetch failed:", bizError.message);
+      } else if (bizRows) {
         const byId = new Map(bizRows.map((row) => [row.id, mapBusinessRow(row)]));
         mapped.relatedBusinesses = ids.map((id) => byId.get(id)).filter(Boolean);
       }
