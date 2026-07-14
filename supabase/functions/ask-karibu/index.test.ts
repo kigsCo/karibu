@@ -64,8 +64,9 @@ function installFetchStub() {
   globalThis.fetch = (async (input: any, init?: any): Promise<Response> => {
     const url = typeof input === "string" ? input : input.url;
 
-    // The per-IP meter that stands in front of the model. HEAD is the count
-    // query; POST records a hit.
+    // The per-IP meter that stands in front of the model. The handler records
+    // the hit (POST) before it counts (HEAD), so the POST has to increment the
+    // stub's tally or the count would never move.
     if (url.includes("/rest/v1/rate_limits")) {
       if ((init?.method ?? "GET").toUpperCase() === "HEAD") {
         return new Response(null, {
@@ -73,6 +74,7 @@ function installFetchStub() {
           headers: { "content-range": `*/${rateLimitHits}` },
         });
       }
+      rateLimitHits += 1;
       return new Response("[]", {
         status: 201,
         headers: { "content-type": "application/json" },
