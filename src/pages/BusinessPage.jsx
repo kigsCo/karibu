@@ -32,6 +32,15 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   // Fall back to full data if the payload was a lightweight list item
   const full = { ...recommended[0], ...b, ...(liveBiz || {}) };
 
+  // Once the live row has loaded, identity-specific detail — the service/price
+  // list, opening hours, the M-Pesa till — must come from THIS business only,
+  // never the recommended[0] fallback base (a salon) whose data would otherwise
+  // show on every listing that has none of its own. Until it loads we keep the
+  // fallback for a stable first paint; an empty live value hides its section.
+  const services = liveBiz ? liveBiz.services : full.services;
+  const hours = liveBiz ? liveBiz.hours : full.hours;
+  const mpesa = liveBiz ? liveBiz.mpesa : full.mpesa;
+
   // Combine existing seed reviews with new user-submitted ones (new first).
   // Once the published set is live it replaces the sample constants.
   const allReviews = [...reviews, ...(liveReviews ?? reviewsSample)];
@@ -177,33 +186,37 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
         </div>
       </div>
 
-      {/* Services */}
-      <div className="px-5 md:px-8 py-4 border-b border-ink-10">
-        <h3 className="font-serif-d text-lg text-ink mb-2">Services & prices</h3>
-        <div className="space-y-1.5">
-          {full.services?.map((s, i) => (
-            <div key={i} className="flex items-center justify-between py-1.5 border-b border-ink-10 last:border-0">
-              <span className="text-sm text-ink">{s.name}</span>
-              <span className="text-sm font-semibold text-ink">{s.price}</span>
-            </div>
-          ))}
+      {/* Services & prices — only when this business lists its own */}
+      {services?.length > 0 && (
+        <div className="px-5 md:px-8 py-4 border-b border-ink-10">
+          <h3 className="font-serif-d text-lg text-ink mb-2">Services & prices</h3>
+          <div className="space-y-1.5">
+            {services.map((s, i) => (
+              <div key={i} className="flex items-center justify-between py-1.5 border-b border-ink-10 last:border-0">
+                <span className="text-sm text-ink">{s.name}</span>
+                <span className="text-sm font-semibold text-ink">{s.price}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Hours + payment */}
       <div className="px-5 md:px-8 py-4 border-b border-ink-10 space-y-3">
-        <div className="flex items-start gap-3">
-          <Clock size={17} className="text-stone-w flex-shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-semibold text-ink">Hours</div>
-            <div className="text-sm text-stone-w">{full.hours}</div>
+        {hours && (
+          <div className="flex items-start gap-3">
+            <Clock size={17} className="text-stone-w flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-semibold text-ink">Hours</div>
+              <div className="text-sm text-stone-w">{hours}</div>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex items-start gap-3">
           <Banknote size={17} className="text-stone-w flex-shrink-0 mt-0.5" />
           <div>
             <div className="text-sm font-semibold text-ink">Payment</div>
-            <div className="text-sm text-stone-w">M-Pesa {full.mpesa} · Visa · Cash (KSh / USD)</div>
+            <div className="text-sm text-stone-w">{`M-Pesa${mpesa ? ` ${mpesa}` : ""} · Visa · Cash (KSh / USD)`}</div>
           </div>
         </div>
       </div>
