@@ -35,6 +35,7 @@ const paths = [
   "/ask", // Ask Karibu (full-bleed)
   "/city", // City picker (full-bleed)
   "/search", // Search
+  "/browse/beauty", // Sub-category picker (has-subs category from Discover)
   "/c/beauty", // Category
   "/b/the-talisman", // Business detail (deep link, no router state)
   "/guides/using-mpesa", // Guide article (deep link, no router state)

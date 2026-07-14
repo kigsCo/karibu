@@ -47,3 +47,53 @@ test("clicking the Guides tab shows Guides, and Discover navigates back", async 
     await screen.findByText("What do you need in Nairobi?"),
   ).toBeInTheDocument();
 });
+
+// Regression guard for the dead "subcategory" nav (KAR): tapping a Discover
+// category that HAS sub-types must open the sub-type PICKER (/browse/:cat),
+// not silently no-op to "/". This drives the real chain end to end:
+// Discover -> Health & Beauty tile -> picker -> Nail Salons -> listing.
+// The picker (SubCategoryScreen) and the listing (CategoryScreen) share no
+// unique copy, so each assertion below can only pass on the intended surface.
+test("Discover -> a has-subs category opens the sub-type picker, then a sub-type opens the listing", async () => {
+  const user = userEvent.setup();
+  render(
+    <MemoryRouter
+      initialEntries={["/"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <App />
+    </MemoryRouter>,
+  );
+
+  // The Discover "Browse services" grid renders the category tiles. "Health &
+  // Beauty" has sub-types, so its tile fires go("subcategory", cat).
+  const beautyTile = await screen.findByRole("button", {
+    name: /Health & Beauty/i,
+  });
+  await user.click(beautyTile);
+
+  // Landed on /browse/beauty — the PICKER. "Browse all health & beauty", the
+  // "By type" heading, and the per-type tiles are unique to SubCategoryScreen;
+  // the /c/... listing shows none of them.
+  expect(
+    await screen.findByText(/Browse all health & beauty/i),
+  ).toBeInTheDocument();
+  expect(screen.getByText("By type")).toBeInTheDocument();
+  const nailsTile = screen.getByRole("button", { name: "Nail Salons" });
+
+  // Picking a sub-type advances to /c/beauty/nails — the LISTING (CategoryScreen).
+  await user.click(nailsTile);
+
+  // CategoryScreen's sort control and the sub-type <h2> are unique to the
+  // listing; both prove we left the picker for /c/beauty/nails. (In tests the
+  // offline supabase mock resolves an empty live page, so the listing shows its
+  // "coming soon" state rather than the seeded salons — the route + screen are
+  // what this asserts.) The picker's "Browse all" affordance is now gone.
+  expect(await screen.findByText("Sort:")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Nail Salons" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/Browse all health & beauty/i),
+  ).not.toBeInTheDocument();
+});

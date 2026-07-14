@@ -6,6 +6,7 @@ import AppShell from "./layout/AppShell.jsx";
 import FullBleedLayout from "./layout/FullBleedLayout.jsx";
 import DiscoverPage from "./pages/DiscoverPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
+import SubCategoryPage from "./pages/SubCategoryPage.jsx";
 import BusinessPage from "./pages/BusinessPage.jsx";
 import ForBusinessPage from "./pages/ForBusinessPage.jsx";
 import GuidesPage from "./pages/GuidesPage.jsx";
@@ -25,6 +26,7 @@ export default function AppRoutes() {
       <Route element={<AppFrame />}>
         <Route element={<AppShell />}>
           <Route index element={<DiscoverPage />} />
+          <Route path="browse/:categorySlug" element={<SubCategoryPage />} />
           <Route path="c/:categorySlug" element={<CategoryPage />} />
           <Route path="c/:categorySlug/:subSlug" element={<CategoryPage />} />
           <Route path="b/:slug" element={<BusinessPage />} />

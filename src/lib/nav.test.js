@@ -10,6 +10,7 @@ test("pathFor maps screens + payloads to routes", () => {
   expect(pathFor("review_compose", { slug: "the-talisman" })).toBe("/b/the-talisman/review");
   expect(pathFor("category", { key: "beauty" })).toBe("/c/beauty");
   expect(pathFor("category", { key: "beauty", subType: { key: "nails" } })).toBe("/c/beauty/nails");
+  expect(pathFor("subcategory", { key: "beauty" })).toBe("/browse/beauty");
   expect(pathFor("business_signup")).toBe("/for-business");
   expect(pathFor("merchant_dashboard")).toBe("/merchant");
   expect(pathFor("city_picker")).toBe("/city");

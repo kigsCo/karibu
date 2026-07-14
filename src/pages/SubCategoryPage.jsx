@@ -111,8 +111,10 @@ const SubCategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   );
 };
 
-// NOTE: currently unreachable (no navigation targets "subcategory"). Kept for
-// parity; wire to a route or remove with the team in a later task.
+// Routed at /browse/:categorySlug — the sub-type PICKER reached from Discover
+// when a category has sub-types (go("subcategory", cat) in DiscoverPage). With
+// no :subSlug present here, subType is null, so the picker (not a listing)
+// renders; picking a sub-type calls go("category", ...) -> /c/:cat/:sub.
 export default function SubCategoryPage() {
   const { categorySlug, subSlug } = useParams();
   const { go, back } = useLegacyNav();

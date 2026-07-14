@@ -39,10 +39,16 @@ structure:
   or change it.
 
 **Known gaps, not bugs to silently "fix":** `SearchPage` is routed (`/search`) but
-currently unlinked from any nav/UI — reachable only by typing the URL. `SubCategoryPage`
-exists but is unrouted entirely. Both are inherited from the prototype's screen set;
-whether to link, route, or retire them is a pending team decision (see task 20), not
-something to resolve unilaterally.
+currently unlinked from any nav/UI — reachable only by typing the URL (confirmed: no
+navigation targets it). Inherited from the prototype's screen set; whether to link or
+retire it is a pending team decision (see task 20), not something to resolve unilaterally.
+
+**Resolved:** `SubCategoryPage` is now ROUTED at `/browse/:categorySlug` — the sub-type
+PICKER reached from Discover when a category has sub-types (`go("subcategory", cat)` in
+`DiscoverPage`, mapped by `pathFor` in `lib/nav.js`). At that path there is no `:subSlug`,
+so it renders the picker; picking a sub-type calls `go("category", ...)` -> the
+`/c/:categorySlug/:subSlug` listing. Restoring this route fixed a visible regression where
+every has-subs category tile (Beauty, Restaurants, Transport, ...) silently no-op'd to `/`.
 
 ## Migration order (historical record — see `frontend-data-migration` skill)
 

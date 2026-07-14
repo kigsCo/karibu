@@ -22,6 +22,8 @@ export function pathFor(screen, payload) {
       const sub = payload?.subType?.key;
       return sub ? `/c/${payload.key}/${sub}` : `/c/${payload?.key}`;
     }
+    case "subcategory":
+      return `/browse/${payload?.key}`;
     case "business_signup":
       return "/for-business";
     case "merchant_dashboard":
@@ -35,6 +37,10 @@ export function pathFor(screen, payload) {
     case "profile":
       return "/profile";
     default:
+      // An unmapped screen name silently returning "/" is how a dead nav link
+      // hides in plain sight (KAR: the Discover "subcategory" regression). Stay
+      // safe in prod (return "/", never throw) but be LOUD in dev.
+      if (import.meta.env.DEV) console.error(`pathFor: unmapped screen "${screen}"`);
       return "/";
   }
 }
