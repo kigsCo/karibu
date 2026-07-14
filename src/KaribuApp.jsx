@@ -31,6 +31,13 @@ import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
 // KAR-9: the `guides` constant below is the fallback; published guides come from
 // the `guides` table. Same contract — identical first paint, live data replaces it.
 import { useGuideDetail, useGuides } from "./hooks/useGuides.js";
+import GlobalStyles from "./components/GlobalStyles.jsx";
+import Badge from "./components/Badge.jsx";
+import StarRow from "./components/StarRow.jsx";
+import HeroImage from "./components/HeroImage.jsx";
+import PlaceholderScreen from "./components/PlaceholderScreen.jsx";
+import BottomNav from "./components/BottomNav.jsx";
+import DesktopNav from "./components/DesktopNav.jsx";
 
 // ---------- DATA ----------
 const visitorEssentials = [
@@ -429,131 +436,6 @@ const guides = [
     ],
   },
 ];
-const HeroImage = ({ variant = "posh" }) => {
-  // Warm-toned SVG placeholders so the prototype looks polished offline
-  const palettes = {
-    posh: ["#E8B89E", "#B8472E", "#3A2418"],
-    talisman: ["#C9A76B", "#6F4E1F", "#1F1A11"],
-    artcaffe: ["#E4D5B8", "#A48253", "#2C2317"],
-    default: ["#E8B89E", "#B8472E", "#2A3D2B"],
-  };
-  const p = palettes[variant] || palettes.default;
-  return (
-    <svg viewBox="0 0 400 240" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <linearGradient id={`g-${variant}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={p[0]} />
-          <stop offset="60%" stopColor={p[1]} />
-          <stop offset="100%" stopColor={p[2]} />
-        </linearGradient>
-        <pattern id={`pat-${variant}`} x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-          <path d="M0 12 L12 0 L24 12 L12 24 Z" fill="none" stroke={p[0]} strokeOpacity="0.18" strokeWidth="0.8" />
-        </pattern>
-      </defs>
-      <rect width="400" height="240" fill={`url(#g-${variant})`} />
-      <rect width="400" height="240" fill={`url(#pat-${variant})`} />
-      <circle cx="320" cy="60" r="80" fill={p[0]} fillOpacity="0.3" />
-      <circle cx="80" cy="200" r="110" fill={p[2]} fillOpacity="0.25" />
-    </svg>
-  );
-};
-
-// ---------- HELPERS ----------
-const StarRow = ({ rating, size = 14 }) => (
-  <span className="inline-flex items-center gap-0.5">
-    {[1, 2, 3, 4, 5].map((i) => (
-      <Star
-        key={i}
-        size={size}
-        className={i <= Math.round(rating) ? "fill-current" : ""}
-        style={{ color: i <= Math.round(rating) ? "#D4A341" : "#D7CFC4" }}
-      />
-    ))}
-  </span>
-);
-
-const Badge = ({ kind, children }) => {
-  const styles = {
-    recommended: { bg: "#FBF4E0", border: "#D4A341", color: "#7A5A10" },
-    verified: { bg: "#EBEFE9", border: "#5C7A5E", color: "#2A3D2B" },
-    open: { bg: "#EFF5EC", border: "#7A9A6F", color: "#2A3D2B" },
-    closed: { bg: "#F3EEE9", border: "#B8A999", color: "#6B5B4A" },
-  };
-  const s = styles[kind] || styles.verified;
-  return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-      style={{ backgroundColor: s.bg, border: `1px solid ${s.border}`, color: s.color }}
-    >
-      {kind === "recommended" && <Sparkles size={11} />}
-      {kind === "verified" && <Check size={11} />}
-      {children}
-    </span>
-  );
-};
-
-// ---------- STYLE BLOCK ----------
-const GlobalStyles = () => (
-  <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-    .font-serif-d { font-family: 'Instrument Serif', 'Georgia', serif; font-weight: 400; letter-spacing: -0.01em; }
-    .font-sans-d { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
-    .bg-ivory { background-color: #F7F1E8; }
-    .bg-ivory-2 { background-color: #F1E9DB; }
-    .bg-clay { background-color: #B8472E; }
-    .bg-clay-soft { background-color: #F3D9CF; }
-    .bg-forest { background-color: #2A3D2B; }
-    .bg-forest-soft { background-color: #EBEFE9; }
-    .bg-ochre { background-color: #D4A341; }
-    .bg-ochre-soft { background-color: #FBF4E0; }
-    .bg-ink { background-color: #1C1613; }
-    .text-clay { color: #B8472E; }
-    .text-forest { color: #2A3D2B; }
-    .text-ochre { color: #D4A341; }
-    .text-ochre-d { color: #7A5A10; }
-    .text-ink { color: #1C1613; }
-    .text-stone-w { color: #8B8378; }
-    .border-ink-10 { border-color: rgba(28,22,19,0.10); }
-    .border-ink-20 { border-color: rgba(28,22,19,0.20); }
-    .border-clay { border-color: #B8472E; }
-    .border-ochre { border-color: #D4A341; }
-
-    /* The app owns the viewport; screens scroll inside it, the page never does.
-       100dvh tracks the mobile URL bar; 100vh is the fallback for older browsers. */
-    .app-viewport { height: 100vh; height: 100dvh; overflow: hidden; }
-
-    .kitenge-bg {
-      background-image:
-        radial-gradient(circle at 25% 30%, rgba(184,71,46,0.06) 0%, transparent 40%),
-        radial-gradient(circle at 75% 70%, rgba(42,61,43,0.05) 0%, transparent 40%);
-    }
-
-    .fade-in { animation: fadeIn 0.32s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-    .scroll-x { scrollbar-width: none; -ms-overflow-style: none; }
-    .scroll-x::-webkit-scrollbar { display: none; }
-
-    .hide-scroll::-webkit-scrollbar { display: none; }
-    .hide-scroll { scrollbar-width: none; }
-
-    .greeting-cycle { animation: greetingFade 9s ease-in-out infinite; }
-    @keyframes greetingFade {
-      0%, 22% { opacity: 1; }
-      28%, 72% { opacity: 0.4; }
-      78%, 100% { opacity: 1; }
-    }
-
-    .pulse-dot {
-      animation: pulseDot 2s ease-in-out infinite;
-    }
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-  `}</style>
-);
-
 // ---------- SCREEN: DISCOVER ----------
 const DiscoverScreen = ({ go, activeCity, onOpenCityPicker }) => {
   const { cities, categories } = useReferenceData();
@@ -2910,91 +2792,6 @@ const SearchScreen = ({ back, go }) => {
             ))}
         </div>
       </div>
-    </div>
-  );
-};
-
-// ---------- SCREEN: PLACEHOLDER ----------
-const PlaceholderScreen = ({ title, message }) => (
-  <div className="fade-in flex flex-col items-center justify-center h-full text-center px-8 py-20">
-    <div className="w-14 h-14 rounded-full bg-ivory-2 flex items-center justify-center mb-4">
-      <Bookmark size={22} className="text-clay" />
-    </div>
-    <h2 className="font-serif-d text-2xl text-ink mb-1">{title}</h2>
-    <p className="text-sm text-stone-w max-w-xs">{message}</p>
-  </div>
-);
-
-// ---------- BOTTOM NAV ----------
-const BottomNav = ({ active, go }) => {
-  const items = [
-    { key: "discover", label: "Discover", Icon: Compass },
-    { key: "guides", label: "Guides", Icon: BookOpen },
-    { key: "saved", label: "Saved", Icon: Bookmark },
-    { key: "business_signup", label: "Business", Icon: Briefcase },
-    { key: "profile", label: "Profile", Icon: User },
-  ];
-  return (
-    <div
-      className="border-t border-ink-10 bg-ivory grid grid-cols-5 flex-shrink-0 md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
-      {items.map(({ key, label, Icon }) => (
-        <button
-          key={key}
-          onClick={() => go(key)}
-          className="flex flex-col items-center py-2.5"
-        >
-          <Icon size={19} className={active === key ? "text-clay" : "text-stone-w"} />
-          <span
-            className={`text-[10px] md:text-xs mt-0.5 ${
-              active === key ? "text-clay font-semibold" : "text-stone-w"
-            }`}
-          >
-            {label}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
-// ---------- DESKTOP NAV (md+) ----------
-// The bottom tab bar is a mobile pattern. On tablet/desktop we surface the same
-// five destinations as a top navigation bar and hide the bottom bar (md:hidden),
-// so the wide layout gets proper app chrome instead of a stranded mobile row.
-const DesktopNav = ({ active, go }) => {
-  const items = [
-    { key: "discover", label: "Discover", Icon: Compass },
-    { key: "guides", label: "Guides", Icon: BookOpen },
-    { key: "saved", label: "Saved", Icon: Bookmark },
-    { key: "business_signup", label: "Business", Icon: Briefcase },
-    { key: "profile", label: "Profile", Icon: User },
-  ];
-  return (
-    <div className="hidden md:flex items-center justify-between border-b border-ink-10 bg-ivory px-8 py-3 flex-shrink-0">
-      <button
-        onClick={() => go("discover")}
-        className="font-serif-d text-2xl text-clay leading-none"
-      >
-        Karibu
-      </button>
-      <nav className="flex items-center gap-1">
-        {items.map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            onClick={() => go(key)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition ${
-              active === key
-                ? "bg-clay-soft text-clay"
-                : "text-stone-w hover:text-ink hover:bg-black/5"
-            }`}
-          >
-            <Icon size={17} className={active === key ? "text-clay" : "text-stone-w"} />
-            {label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 };
