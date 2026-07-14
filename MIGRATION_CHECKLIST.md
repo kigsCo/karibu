@@ -191,16 +191,24 @@ on the list path.
       supabase/functions/`). The 10 new hardening tests were run against the pre-fix
       handlers from `main` and **all 10 fail there** — they encode the vulnerabilities, not
       the implementation.
-- [ ] Deployed anywhere real; secrets set; crons scheduled.
-- [ ] Confirm the model string against current Anthropic docs before go-live.
+- [x] **All 7 functions deployed to the cloud project** (2026-07-12, via Supabase MCP
+      `deploy_edge_function`, each bundled with its `_shared` closure, `verify_jwt` per
+      `config.toml`). Verified from outside: every one boots and fails closed with no
+      secrets set. `moderation.ts` byte-diffed against the repo via `get_edge_function`.
+- [ ] **Secrets set; crons scheduled.** The functions are live but inert until the secrets
+      below are set and the two crons are scheduled — see the go-live steps in that section.
+- [ ] Confirm the model string against current Anthropic docs before go-live (both AI
+      functions pin `claude-sonnet-4-6`, which is current).
 
 ### 🔴 Security blockers — must be fixed BEFORE any edge function is deployed
 
-Found by automated review on 2026-07-10 and confirmed by reading the code. **None is
-exploitable today**: a cloud project now exists, but **no edge function is deployed to it**,
-so none is reachable. Each becomes live the moment Phase 7 deploys. The CI deploy job is
-gated on `SUPABASE_PROJECT_REF` being set, so adding that secret is the trigger that arms
-all of this. Do not add it until every box below is ticked.
+Found by automated review on 2026-07-10 and confirmed by reading the code. **The functions
+are now deployed (2026-07-12) but not exploitable**: every one fails closed until its secret
+is set — an unauthenticated caller gets a 401/503, never a working endpoint (verified from
+outside; see SUPABASE_SETUP.md). Each becomes *functional* only when its secret below is set.
+Setting a secret is therefore the go-live trigger for that function — set them in the order
+that suits launch (Ask Karibu needs only `ANTHROPIC_API_KEY`; M-Pesa can wait for merchant
+approval).
 
 Seven code findings were fixed on 2026-07-10 (three in the first pass, four more found
 while closing out Phase 4). Their regression tests live beside the functions and fail

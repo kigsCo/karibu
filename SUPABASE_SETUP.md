@@ -33,10 +33,27 @@ inactivity** — fine before launch, not after. Both are tracked in
 - `supabase/seed.sql`: 5 cities, 13 categories, 47 sub-types, 10 active
   businesses, 6 published reviews, 6 published guides.
 - RLS enabled on all 10 app tables.
+- **All 7 edge functions (deployed 2026-07-12).** Each was pushed with its
+  `_shared/*.ts` closure bundled and `verify_jwt` set per the table below.
+  Verified from outside: every function boots and **fails closed** until its
+  secret is set (see the sweep in "Verifying a deployment"). They are inert but
+  live — a stranger gets a 401/503, never a working endpoint.
 
-Not deployed: **no edge functions, no cron schedules, no secrets.** Those are
-Phase 4 and Phase 7, and they are gated behind the security blockers in
-`MIGRATION_CHECKLIST.md`.
+  | Function | `verify_jwt` | Inert until |
+  |---|---|---|
+  | `ask-karibu` | false | `ANTHROPIC_API_KEY` |
+  | `submit-review` | true | a signed-in user (Phase 5 auth) |
+  | `moderate-reviews` | false | `INTERNAL_FUNCTION_SECRET` + cron |
+  | `calculate-rankings` | false | `INTERNAL_FUNCTION_SECRET` + cron |
+  | `send-onboarding-email` | false | `INTERNAL_FUNCTION_SECRET` + `RESEND_API_KEY` |
+  | `mpesa-stk-push` | false | `MPESA_ENABLED=true` + M-Pesa creds |
+  | `mpesa-callback` | false | `MPESA_CALLBACK_SECRET` |
+
+Not yet done: **no secrets set, no cron schedules, no frontend host.** Setting
+the secrets below and scheduling the two crons is what turns these live-but-inert
+functions on. The functions were deployed with the Supabase MCP `deploy_edge_function`
+tool rather than the CLI; the CI deploy job stays disarmed (`SUPABASE_PROJECT_REF`
+unset) and setting it later simply re-deploys the same code on the next push to `main`.
 
 ## Environment variables
 
