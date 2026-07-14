@@ -43,4 +43,13 @@ export default [
       ],
     },
   },
+  {
+    // Vitest globals (test, expect, vi, ...) for files under src/test/ — the
+    // vitest.config.js `globals: true` option affects the test runtime only,
+    // not ESLint's static analysis, so it needs its own globals here.
+    files: ["src/test/**/*.{js,jsx}"],
+    languageOptions: {
+      globals: { ...globals.vitest },
+    },
+  },
 ];
