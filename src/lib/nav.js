@@ -64,10 +64,39 @@ export function activeTabFromPath(pathname) {
   return "discover";
 }
 
+// React Router keeps the nav payload in history `state`, and BrowserRouter
+// commits it through history.pushState, which serializes with the structured-
+// clone algorithm. That algorithm throws on values it can't clone — notably
+// React components: category payloads carry lucide `Icon`s (forwardRef objects)
+// on the category and every sub-type. Unstripped, EVERY Discover category tile
+// threw DataCloneError inside navigate() and silently no-op'd (a dead click).
+// jsdom's pushState does not serialize, so MemoryRouter tests never caught it.
+//
+// Keep only clone-safe data. This is lossless where it matters: the category
+// pages re-derive icons from the URL slug via ReferenceDataContext, and the
+// pages that DO read location.state (business/guide/review) carry only plain
+// fields, which survive untouched.
+export function cloneSafeState(value) {
+  const t = typeof value;
+  if (t === "function" || t === "symbol") return undefined;
+  if (value === null || t !== "object") return value; // string/number/boolean/bigint
+  if (value.$$typeof !== undefined) return undefined; // React element/component
+  if (Array.isArray(value)) return value.map(cloneSafeState);
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    const cleaned = cloneSafeState(v);
+    if (cleaned !== undefined) out[k] = cleaned;
+  }
+  return out;
+}
+
 export function useLegacyNav() {
   const navigate = useNavigate();
   const go = (screen, payload = null) =>
-    navigate(pathFor(screen, payload), payload ? { state: { payload } } : undefined);
+    navigate(
+      pathFor(screen, payload),
+      payload ? { state: { payload: cloneSafeState(payload) } } : undefined,
+    );
   const back = () => navigate(-1);
   return { go, back };
 }
