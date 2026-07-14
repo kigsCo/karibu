@@ -1,45 +1,21 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState } from "react";
 import {
-  MapPin, Bell, Heart, ChevronRight, ChevronLeft, Star,
+  Heart, ChevronRight, ChevronLeft, Star,
   Phone, MessageCircle, Navigation, Globe, Clock, Check,
-  Compass, Briefcase, User, Sparkles, Filter,
-  Scissors, UtensilsCrossed, Coffee, Shirt, Pill,
-  Dumbbell, Landmark, ShoppingBag, Wine, ShoppingCart, Stethoscope,
-  Banknote, ArrowUpRight,
+  Sparkles,
+  Banknote,
   Trophy, Camera, X, ThumbsUp, AlertCircle,
-  BarChart3, Eye,
-  LayoutDashboard, Users,
-  Building2, MoreHorizontal,
-  Hotel, Bed, Palmtree, Building, Beer, Cookie, Hospital,
-  ShoppingBasket, Beef, Wheat, Cake, Receipt, Sparkle, Music,
-  Gift, Store, Croissant, ChefHat, Activity, Carrot,
-  Trees, Key, Scale, Ruler, Warehouse,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
-// KAR-5: `cities` and `categories` now come from Supabase (fetched once on app
-// load) via the ReferenceDataProvider in App.jsx; read them inside each screen
-// with `useReferenceData()`. The byte-identical prototype literals live in
-// src/data/referenceData.js as the initial/fallback value (identical first
-// paint, and the app still renders if Supabase is unreachable).
-import { useReferenceData } from "./context/ReferenceDataContext.jsx";
-// KAR-6: `recommended` + `salonsList` now come from Supabase via the
-// keyset-paginated useBusinesses hook; the byte-identical prototype literals
-// live in src/data/businesses.js as the initial/fallback value (identical
-// first paint, and the app still renders if Supabase is unreachable).
-import { useBusinesses } from "./hooks/useBusinesses.js";
 import { useBusinessDetail } from "./hooks/useBusinessDetail.js";
-// KAR-9: the `guides` constant is the fallback; published guides come from
-// the `guides` table. Same contract — identical first paint, live data
-// replaces it. `guides`, `guideCategories`, and `GUIDE_CATEGORY_FALLBACK` live
-// in src/data/guides.js.
-import { useGuideDetail, useGuides } from "./hooks/useGuides.js";
 import Badge from "./components/Badge.jsx";
 import StarRow from "./components/StarRow.jsx";
 import HeroImage from "./components/HeroImage.jsx";
-import { visitorEssentials } from "./data/discover.js";
+// KAR-6: `recommended` + `salonsList` are the byte-identical prototype
+// literals; other screens use them as the fallback value passed into
+// data hooks, and these screens fall back to them directly.
 import { recommended, salonsList } from "./data/businesses.js";
 import { reviewsSample } from "./data/reviews.js";
-import { guides, guideCategories, GUIDE_CATEGORY_FALLBACK } from "./data/guides.js";
 
 // ---------- SCREEN: BUSINESS DETAIL ----------
 export const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
