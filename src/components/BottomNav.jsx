@@ -1,16 +1,18 @@
-import { Compass, BookOpen, Bookmark, Briefcase, User } from "lucide-react";
+import { Compass, BookOpen, Bookmark, User } from "lucide-react";
 
+// Customer chrome only: the business side lives at /for-business (reached
+// from /welcome's business card and deep links), deliberately not a tab.
 const BottomNav = ({ active, go }) => {
   const items = [
     { key: "discover", label: "Discover", Icon: Compass },
     { key: "guides", label: "Guides", Icon: BookOpen },
     { key: "saved", label: "Saved", Icon: Bookmark },
-    { key: "business_signup", label: "Business", Icon: Briefcase },
     { key: "profile", label: "Profile", Icon: User },
   ];
   return (
     <div
-      className="border-t border-ink-10 bg-ivory grid grid-cols-5 flex-shrink-0 md:hidden"
+      data-testid="bottom-nav"
+      className="border-t border-ink-10 bg-ivory grid grid-cols-4 flex-shrink-0 md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {items.map(({ key, label, Icon }) => (

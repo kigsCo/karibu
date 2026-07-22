@@ -11,7 +11,15 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCity } from "../context/CityContext.jsx";
+import { useReferenceData } from "../context/ReferenceDataContext.jsx";
 import { useProfile } from "../hooks/useProfile.js";
+import { useMyReviews } from "../hooks/useMyReviews.js";
+import { useVisitHistory } from "../hooks/useVisitHistory.js";
+import InitialsAvatar from "../components/profile/InitialsAvatar.jsx";
+import HomeCitySection from "../components/profile/HomeCitySection.jsx";
+import MyReviewsSection from "../components/profile/MyReviewsSection.jsx";
+import VisitHistorySection from "../components/profile/VisitHistorySection.jsx";
 
 // ---------- SCREEN: PROFILE / AUTH ----------
 // Minimal auth surface (FIX_PLAN P0 #6): a passwordless email sign-in link.
@@ -26,8 +34,26 @@ export default function ProfilePage() {
     saving: savingName,
     error: profileError,
     saveName,
+    saveHomeCity,
   } = useProfile();
+  const { cities } = useReferenceData();
+  const { setCityKey } = useCity();
+  const { reviews, loading: reviewsLoading } = useMyReviews();
+  const {
+    visits,
+    loading: visitsLoading,
+    error: historyError,
+    clear: clearHistory,
+  } = useVisitHistory();
   const [nameDraft, setNameDraft] = useState(null); // null = not editing
+
+  // Fallback reference data carries no DB ids; without them there is nothing
+  // to write into profiles.home_city_id, so the section stays hidden.
+  const selectableCities = cities.filter((c) => c.id);
+  const selectHomeCity = async (c) => {
+    const ok = await saveHomeCity(c.id);
+    if (ok) setCityKey(c.key); // home city becomes the active city right away
+  };
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -68,19 +94,14 @@ export default function ProfilePage() {
     // email is the fallback so a failed profile fetch never blanks the screen.
     const displayName = profile?.full_name || null;
     return (
-      <div className="fade-in flex flex-col items-center px-8 py-16 text-center">
-        {profile?.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="w-14 h-14 rounded-full object-cover mb-4"
+      <div className="fade-in flex flex-col items-center px-8 py-10 text-center">
+        <div className="mb-4">
+          <InitialsAvatar
+            name={displayName}
+            email={profile?.email || user?.email}
+            avatarUrl={profile?.avatar_url}
           />
-        ) : (
-          <div className="w-14 h-14 rounded-full bg-ivory-2 flex items-center justify-center mb-4">
-            <UserCircle size={24} className="text-clay" />
-          </div>
-        )}
+        </div>
         <h2 className="font-serif-d text-2xl text-ink mb-1">
           {displayName || "Your profile"}
         </h2>
@@ -148,6 +169,25 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+
+        {selectableCities.length > 0 && (
+          <HomeCitySection
+            cities={selectableCities}
+            homeCityId={profile?.home_city_id ?? null}
+            saving={savingName}
+            onSelect={selectHomeCity}
+          />
+        )}
+
+        <MyReviewsSection reviews={reviews} loading={reviewsLoading} />
+
+        <VisitHistorySection
+          visits={visits}
+          loading={visitsLoading}
+          error={historyError}
+          onClear={clearHistory}
+          onOpen={(b) => navigate(`/b/${b.slug}`)}
+        />
 
         <button
           onClick={signOut}

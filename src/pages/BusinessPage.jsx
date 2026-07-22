@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import {
   Heart, ChevronRight, ChevronLeft, Star,
@@ -8,6 +8,9 @@ import {
   Trophy, Camera, X, ThumbsUp, AlertCircle,
 } from "lucide-react";
 import { useBusinessDetail } from "../hooks/useBusinessDetail.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useSavedPlaces } from "../hooks/useSavedPlaces.js";
+import { recordVisit } from "../hooks/useVisitHistory.js";
 import Badge from "../components/Badge.jsx";
 import StarRow from "../components/StarRow.jsx";
 import HeroImage from "../components/HeroImage.jsx";
@@ -28,6 +31,23 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   // reviews. Constant-sourced payloads have no slug; the hook stays inert and
   // the prototype merge below behaves exactly as before.
   const { business: liveBiz, reviews: liveReviews } = useBusinessDetail(b.slug);
+
+  // Saved + history need the DB row id (liveBiz.dbId). Signed-in with a live
+  // row: the heart persists to saved_places and the visit lands in history.
+  // Guests / fallback rows keep the original local-only heart untouched.
+  const { user } = useAuth();
+  const { canPersist, savedIds, toggle: toggleSaved } = useSavedPlaces();
+  const dbId = liveBiz?.dbId ?? null;
+  const heartOn = canPersist && dbId ? savedIds.has(dbId) : saved;
+  const onHeart = () => {
+    if (canPersist && dbId) toggleSaved(dbId);
+    else setSaved(!saved);
+  };
+
+  useEffect(() => {
+    // Fire-and-forget; recordVisit swallows its own errors.
+    if (user?.id && dbId) recordVisit(user.id, dbId);
+  }, [user?.id, dbId]);
 
   // Fall back to full data if the payload was a lightweight list item
   const full = { ...recommended[0], ...b, ...(liveBiz || {}) };
@@ -96,13 +116,13 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
             <ChevronLeft size={18} className="text-ink" />
           </button>
           <button
-            onClick={() => setSaved(!saved)}
+            onClick={onHeart}
             className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur"
             style={{ backgroundColor: "rgba(247,241,232,0.85)" }}
           >
             <Heart
               size={18}
-              className={saved ? "fill-current text-clay" : "text-ink"}
+              className={heartOn ? "fill-current text-clay" : "text-ink"}
             />
           </button>
         </div>

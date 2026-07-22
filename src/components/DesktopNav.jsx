@@ -1,14 +1,14 @@
-import { Compass, BookOpen, Bookmark, Briefcase, User } from "lucide-react";
+import { Compass, BookOpen, Bookmark, User } from "lucide-react";
 
 // The bottom tab bar is a mobile pattern. On tablet/desktop we surface the same
-// five destinations as a top navigation bar and hide the bottom bar (md:hidden),
-// so the wide layout gets proper app chrome instead of a stranded mobile row.
+// customer destinations as a top navigation bar and hide the bottom bar
+// (md:hidden), so the wide layout gets proper app chrome instead of a stranded
+// mobile row. Business chrome deliberately lives off-tab at /for-business.
 const DesktopNav = ({ active, go }) => {
   const items = [
     { key: "discover", label: "Discover", Icon: Compass },
     { key: "guides", label: "Guides", Icon: BookOpen },
     { key: "saved", label: "Saved", Icon: Bookmark },
-    { key: "business_signup", label: "Business", Icon: Briefcase },
     { key: "profile", label: "Profile", Icon: User },
   ];
   return (
