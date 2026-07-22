@@ -72,5 +72,33 @@ export function useProfile() {
     [userId],
   );
 
-  return { profile, loading, saving, error, saveName };
+  // Set (or clear, with null) the home city. Same column-scoped grant as
+  // full_name; the FK constrains the value to a real city.
+  const saveHomeCity = useCallback(
+    async (cityId) => {
+      if (!userId) return false;
+      setSaving(true);
+      setError(null);
+      try {
+        const { data, error: updateError } = await supabase
+          .from("profiles")
+          .update({ home_city_id: cityId })
+          .eq("id", userId)
+          .select("id, email, full_name, avatar_url, home_city_id")
+          .maybeSingle();
+        if (updateError) throw updateError;
+        if (data) setProfile(data);
+        else setProfile((p) => (p ? { ...p, home_city_id: cityId } : p));
+        return true;
+      } catch (e) {
+        setError(e.message || "Couldn't save your home city. Please try again.");
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [userId],
+  );
+
+  return { profile, loading, saving, error, saveName, saveHomeCity };
 }

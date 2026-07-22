@@ -54,24 +54,35 @@ describe("route mounts", () => {
 
 // The riskiest part of the cutover: the "*" catch-all lives UNDER AppShell, so a
 // full-bleed route (e.g. /ask) must out-rank it and render its own screen with
-// NO nav chrome — not the 404 with chrome. BottomNav's `grid-cols-5` is the
+// NO nav chrome — not the 404 with chrome. BottomNav's data-testid is the
 // unambiguous chrome marker; FullBleedLayout renders no nav.
 describe("route resolution + chrome", () => {
   test("unknown path renders the 404 page WITH chrome (under AppShell)", async () => {
     const container = await mountAt("/no-such-page");
     expect(container.textContent).toContain("Page not found");
-    expect(container.querySelector(".grid-cols-5")).toBeTruthy();
+    expect(container.querySelector('[data-testid="bottom-nav"]')).toBeTruthy();
   });
 
   test("full-bleed route out-ranks '*' and hides chrome", async () => {
     const container = await mountAt("/ask");
     // Had /ask fallen through to '*', we'd see the 404 copy. It doesn't.
     expect(container.textContent).not.toContain("Page not found");
-    expect(container.querySelector(".grid-cols-5")).toBeNull();
+    expect(container.querySelector('[data-testid="bottom-nav"]')).toBeNull();
   });
 
   test("chrome route ('/') shows the nav", async () => {
     const container = await mountAt("/");
-    expect(container.querySelector(".grid-cols-5")).toBeTruthy();
+    expect(container.querySelector('[data-testid="bottom-nav"]')).toBeTruthy();
+  });
+
+  test("customer chrome is four tabs — Business is not one of them", async () => {
+    const container = await mountAt("/");
+    const tabs = [...container.querySelectorAll('[data-testid="bottom-nav"] button')];
+    expect(tabs.map((t) => t.textContent)).toEqual([
+      "Discover",
+      "Guides",
+      "Saved",
+      "Profile",
+    ]);
   });
 });

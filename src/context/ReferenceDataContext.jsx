@@ -29,8 +29,11 @@ const ReferenceDataContext = createContext({
 });
 
 // Map a DB `cities` row -> the prototype `{ key, label, tagline, hoods }` shape.
+// The DB id rides along for features that need the FK (profiles.home_city_id);
+// fallback constants have no id, so consumers must treat it as optional.
 function mapCity(row) {
   return {
+    id: row.id,
     key: row.slug,
     label: row.name,
     tagline: row.tagline,
@@ -94,7 +97,7 @@ export function ReferenceDataProvider({ children }) {
         const [citiesRes, categoriesRes] = await Promise.all([
           supabase
             .from("cities")
-            .select("slug, name, tagline, hoods, is_active, sort_order")
+            .select("id, slug, name, tagline, hoods, is_active, sort_order")
             .eq("is_active", true)
             .order("sort_order", { ascending: true }),
           supabase
