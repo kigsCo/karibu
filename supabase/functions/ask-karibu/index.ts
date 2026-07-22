@@ -17,9 +17,28 @@ import { clientIpFromXff } from "../_shared/security.ts";
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+// The five launch-city slugs. `city` is both interpolated into the system prompt
+// AND used to filter the grounding directory, so an unvalidated value is a
+// prompt-injection vector and would otherwise ground a reply on the wrong city.
+// Anything outside this set is coerced to nairobi.
+const CITY_SLUGS = new Set([
+  "nairobi",
+  "mombasa",
+  "naivasha",
+  "kisumu",
+  "nakuru",
+]);
+
 // Chat turns per IP per hour. See the note at the call site on CGNAT.
 const ASK_PER_IP_PER_HOUR = 60;
 const RATE_WINDOW_SECONDS = 3600;
+
+// Per-request input bounds. The rate limit caps request COUNT, not tokens per
+// request — without these one caller inside the 60/h limit could carry unbounded
+// input tokens (all billed to our Anthropic key). A real conversation is a
+// handful of short turns; these ceilings are generous.
+const MAX_TURNS = 20;
+const MAX_CHARS_PER_TURN = 2000;
 
 Deno.serve(async (req: Request) => {
   const pre = handleOptions(req);
@@ -39,10 +58,34 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { messages, city = "nairobi", sessionId } = body;
+  const { messages, sessionId } = body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return errorResponse("`messages` must be a non-empty array", 400);
   }
+  if (messages.length > MAX_TURNS) {
+    return errorResponse(`Too many messages (max ${MAX_TURNS})`, 400);
+  }
+  for (const m of messages) {
+    const role = (m as { role?: unknown })?.role;
+    const content = (m as { content?: unknown })?.content;
+    if (
+      (role !== "user" && role !== "assistant") ||
+      typeof content !== "string" ||
+      content.length === 0 ||
+      content.length > MAX_CHARS_PER_TURN
+    ) {
+      return errorResponse(
+        "Each message must be { role: 'user' | 'assistant', content: string } " +
+          `and content 1-${MAX_CHARS_PER_TURN} chars`,
+        400,
+      );
+    }
+  }
+
+  // Validate the city against the known launch slugs before it reaches either
+  // the query or the prompt. Unknown / non-string -> nairobi.
+  const rawCity = typeof body.city === "string" ? body.city : "nairobi";
+  const city = CITY_SLUGS.has(rawCity) ? rawCity : "nairobi";
 
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) return errorResponse("Server misconfigured", 500);
@@ -70,11 +113,17 @@ Deno.serve(async (req: Request) => {
     return errorResponse("You're asking a lot of questions! Try again shortly.", 429);
   }
 
-  // --- Fetch the verified directory (top 40 active by ranking) ----------
+  // --- Fetch the verified directory (top 40 active by ranking, THIS city) ----
+  // spec §6 row 6: the grounded directory is for the SELECTED city. !inner makes
+  // the city join a filter (drops businesses in other cities) rather than a
+  // nullable embed. Mirrors the pattern in src/hooks/useBusinesses.js.
   const { data: businesses, error: dbError } = await supabase
     .from("businesses")
-    .select("id, name, hood, category_id, price_range, rating, tier, about, tags")
+    .select(
+      "id, name, hood, category_id, price_range, rating, tier, about, tags, city:cities!inner(slug)",
+    )
     .eq("status", "active")
+    .eq("city.slug", city)
     .order("ranking_score", { ascending: false })
     .limit(40);
 
@@ -93,8 +142,15 @@ Deno.serve(async (req: Request) => {
     )
     .join("\n");
 
+  // When the selected city has no verified listings yet (e.g. every seeded
+  // business is in Nairobi and the visitor asked about Mombasa), the prompt must
+  // say so — never let the model invent a local business to fill the gap.
+  const grounding = list.length
+    ? `Only recommend businesses from this verified directory for ${city}:\n${directory}`
+    : `There are no verified Karibu businesses listed in ${city} yet. Say so honestly, suggest the visitor browse the app or ask about Nairobi, and do NOT invent or recommend any business.`;
+
   const systemPrompt =
-    `You are Karibu, a warm local guide for visitors to ${city}. Only recommend businesses from this verified directory:\n${directory}\nWhen asked about something not in the directory, say so honestly and suggest browsing the broader category in the app. Keep replies under 120 words. Natural prose. No markdown lists.`;
+    `You are Karibu, a warm local guide for visitors to ${city}. ${grounding}\nWhen asked about something not in the directory, say so honestly and suggest browsing the broader category in the app. Keep replies under 120 words. Natural prose. No markdown lists.`;
 
   // --- Call Anthropic ----------------------------------------------------
   const anthropicRes = await fetch(ANTHROPIC_URL, {

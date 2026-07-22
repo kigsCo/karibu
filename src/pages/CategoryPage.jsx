@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { ChevronLeft, Filter, Compass, Sparkles } from "lucide-react";
 import { useLegacyNav } from "../lib/nav.js";
@@ -25,7 +25,7 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
   // page resolves the prototype behaviour holds (salonsList for the one seeded
   // case, "coming soon" otherwise); once live, the database decides — an empty
   // result shows the existing "coming soon" state.
-  const { items: liveItems, live } = useBusinesses({
+  const { items: liveItems, live, done, loadMore } = useBusinesses({
     citySlug: activeCity,
     categorySlug: payload?.key,
     subTypeSlug: payload?.subType?.key,
@@ -51,6 +51,27 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
     if (activeSort === "Open now") list = list.filter((s) => s.openNow);
     return list;
   }, [liveItems, activeHood, activeSort, hasListings]);
+
+  // Infinite scroll: an invisible sentinel at the end of the list loads the next
+  // keyset page when it scrolls into view. No visible "Show more" control is
+  // added — the visual design is unchanged; the list simply keeps filling as the
+  // reader scrolls (this is what makes the >20-row lists reachable at all; the
+  // hook exposed loadMore but nothing called it, so lists hard-capped at 20).
+  // Feature-guarded: environments without IntersectionObserver (jsdom, very old
+  // browsers) just don't auto-load — the rendered list is unaffected.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadMore();
+      },
+      { rootMargin: "200px" }, // prefetch slightly before the reader hits the end
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   return (
     <div className="fade-in pb-4">
@@ -159,6 +180,10 @@ const CategoryScreen = ({ payload, go, back, activeCity = "nairobi" }) => {
             </div>
           </button>
         ))}
+        {/* Invisible infinite-scroll sentinel — see the observer effect above. */}
+        {live && !done && hasListings && (
+          <div ref={sentinelRef} aria-hidden="true" className="h-4" />
+        )}
         {filtered.length === 0 && hasListings && (
           <div className="text-center py-10 text-sm text-stone-w">
             No businesses match those filters.

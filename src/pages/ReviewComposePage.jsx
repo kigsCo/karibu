@@ -5,9 +5,10 @@ import { supabase } from "../lib/supabase";
 import HeroImage from "../components/HeroImage.jsx";
 import { recommended } from "../data/businesses.js";
 import { useLocalReviews } from "../context/LocalReviewsContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 // ---------- SCREEN: REVIEW COMPOSER ----------
-const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
+const ReviewComposerScreen = ({ payload, back, onSubmit, isSignedIn, onSignIn }) => {
   const biz = payload || recommended[0];
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -34,6 +35,13 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
   const charCount = text.length;
 
   const handleSubmit = () => {
+    // Auth has shipped (task 6): a signed-out visitor is sent to sign in rather
+    // than shown a fabricated "your review is live". The composed draft stays in
+    // the form — nothing is silently dropped behind a success message.
+    if (!isSignedIn) {
+      onSignIn();
+      return;
+    }
     if (!canSubmit) return;
     const recoLabel = recos.find((r) => r.key === recommendation)?.label;
     const newReview = {
@@ -116,6 +124,25 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
           <div className="text-xs text-stone-w">{biz.category} · {biz.hood}</div>
         </div>
       </div>
+
+      {/* Honest sign-in notice — no fabricated persistence for signed-out users */}
+      {!isSignedIn && (
+        <div className="px-5 md:px-8 pb-1">
+          <div className="p-3 rounded-xl bg-ochre-soft border border-ochre text-xs text-ink flex items-start gap-2">
+            <AlertCircle size={13} className="text-ochre-d flex-shrink-0 mt-0.5" />
+            <span>
+              You're not signed in.{" "}
+              <button
+                onClick={onSignIn}
+                className="font-semibold text-ochre-d underline"
+              >
+                Sign in
+              </button>{" "}
+              to post your review — it isn't saved until you do.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Rating */}
       <div className="px-5 md:px-8 pt-5 pb-5 text-center border-b border-ink-10">
@@ -271,12 +298,18 @@ const ReviewComposerScreen = ({ payload, back, onSubmit }) => {
         </p>
         <button
           onClick={handleSubmit}
-          disabled={!canSubmit}
+          disabled={isSignedIn && !canSubmit}
           className={`w-full py-3 rounded-xl text-sm font-semibold transition ${
-            canSubmit ? "bg-clay text-white" : "bg-ivory-2 text-stone-w cursor-not-allowed"
+            !isSignedIn || canSubmit
+              ? "bg-clay text-white"
+              : "bg-ivory-2 text-stone-w cursor-not-allowed"
           }`}
         >
-          {canSubmit ? "Post review" : "Complete all fields to post"}
+          {!isSignedIn
+            ? "Sign in to post review"
+            : canSubmit
+            ? "Post review"
+            : "Complete all fields to post"}
         </button>
       </div>
     </div>
@@ -288,10 +321,19 @@ export default function ReviewComposePage() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { addReview } = useLocalReviews();
+  const { session } = useAuth();
   const payload = state?.payload ?? { id: slug, slug };
   const onSubmit = (businessId, review) => {
     addReview(businessId, review);
     navigate(-1);
   };
-  return <ReviewComposerScreen payload={payload} back={() => navigate(-1)} onSubmit={onSubmit} />;
+  return (
+    <ReviewComposerScreen
+      payload={payload}
+      back={() => navigate(-1)}
+      onSubmit={onSubmit}
+      isSignedIn={!!session}
+      onSignIn={() => navigate("/profile")}
+    />
+  );
 }
