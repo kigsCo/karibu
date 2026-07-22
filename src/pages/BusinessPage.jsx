@@ -118,7 +118,7 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
         <div className="px-5 md:px-8 py-2.5 bg-forest-soft border-b border-ink-10 flex items-center gap-2 fade-in">
           <Check size={15} className="text-forest" />
           <span className="text-xs font-semibold text-forest">
-            Thanks — your review is live. Others will see it after moderation.
+            Thanks — your review is in. Others will see it once it clears moderation.
           </span>
         </div>
       )}

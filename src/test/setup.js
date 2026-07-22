@@ -10,6 +10,7 @@ vi.mock("../lib/supabase", () => {
     select: () => chain,
     eq: () => chain,
     lt: () => chain,
+    or: () => chain,
     in: () => chain,
     order: () => chain,
     limit: () => chain,
@@ -19,7 +20,14 @@ vi.mock("../lib/supabase", () => {
   return {
     supabase: {
       from: () => chain,
-      auth: { getSession: () => Promise.resolve({ data: { session: null } }) },
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null } }),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe() {} } },
+        }),
+        signInWithOtp: () => Promise.resolve({ data: {}, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+      },
       functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
     },
   };

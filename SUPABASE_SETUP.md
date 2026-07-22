@@ -50,7 +50,7 @@ inactivity** — fine before launch, not after. Both are tracked in
   | `mpesa-callback` | false | `MPESA_CALLBACK_SECRET` |
 
 Not yet done: **no secrets set, no cron schedules, no frontend host.** Setting
-the secrets below and scheduling the two crons is what turns these live-but-inert
+the secrets below and scheduling the three crons is what turns these live-but-inert
 functions on. The functions were deployed with the Supabase MCP `deploy_edge_function`
 tool rather than the CLI; the CI deploy job stays disarmed (`SUPABASE_PROJECT_REF`
 unset) and setting it later simply re-deploys the same code on the next push to `main`.
@@ -101,9 +101,11 @@ unconfigured deploy is a visibly broken cron job, never an open endpoint.
 
 ## Scheduling the cron functions
 
-`moderate-reviews` runs hourly, `calculate-rankings` nightly at 03:00 EAT. Both
-are scheduled with `pg_cron` + `pg_net`, which means the schedule lives in the
-database rather than in this repo.
+`moderate-reviews` runs hourly, `calculate-rankings` nightly at 03:00 EAT, and
+`prune_rate_limits()` nightly at 03:30 EAT. The two function crons are scheduled
+with `pg_cron` + `pg_net` (they make an authenticated HTTP call to the edge
+function); the prune job is a direct SQL call, so it needs `pg_cron` only. Either
+way the schedule lives in the database rather than in this repo.
 
 **Run this once in the SQL editor. Do not put it in a migration** — migrations
 are committed to git, and both the shared secret and the service-role key would
@@ -147,6 +149,14 @@ select cron.schedule('calculate-rankings-nightly', '0 0 * * *', $job$
     body    := '{}'::jsonb,
     timeout_milliseconds := 55000
   );
+$job$);
+
+-- Nightly prune of the rate_limits table. 00:30 UTC == 03:30 EAT, offset from
+-- the rankings job. This is a direct SQL call — prune_rate_limits() is defined
+-- in 20260601000004_rate_limits.sql and just deletes rows older than 7 days —
+-- so it needs no pg_net, no HTTP, and no secret.
+select cron.schedule('prune-rate-limits-nightly', '30 0 * * *', $job$
+  select prune_rate_limits();
 $job$);
 ```
 

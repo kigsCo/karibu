@@ -6,6 +6,29 @@ import { useReferenceData } from "../context/ReferenceDataContext.jsx";
 import { useLegacyNav } from "../lib/nav.js";
 import { useCity } from "../context/CityContext.jsx";
 
+// Only send the last N turns to the server, matching ask-karibu's MAX_TURNS cap
+// so a long on-screen conversation never trips the server's 400.
+const ASK_HISTORY_LIMIT = 20;
+
+// One conversation id per browser tab, so the server's ai_conversations log has
+// a stable key to group turns by — this is what makes that logging (previously
+// gated on a sessionId the frontend never sent) actually fire. Persisted in
+// sessionStorage so a reload keeps the same conversation; falls back to an
+// in-memory id where storage is unavailable (private mode).
+let memSessionId = null;
+function getAskSessionId() {
+  try {
+    let id = sessionStorage.getItem("karibu_ask_session");
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem("karibu_ask_session", id);
+    }
+    return id;
+  } catch {
+    return (memSessionId ||= crypto.randomUUID());
+  }
+}
+
 // ---------- SCREEN: ASK KARIBU (AI search) ----------
 const AskKaribuScreen = ({ back, go, activeCity }) => {
   const { cities } = useReferenceData();
@@ -36,12 +59,22 @@ const AskKaribuScreen = ({ back, go, activeCity }) => {
       // edge function, which holds the Anthropic API key server-side, grounds
       // the reply in the live verified directory, and returns the raw Anthropic
       // Messages response — so the content parsing below is unchanged.
+      // Trim history to the server's cap. The window MUST begin with a user turn
+      // — Anthropic rejects an assistant-first messages array — so drop any
+      // leading assistant turn the slice left at the front (an odd-length
+      // …,user history sliced to an even cap can start on an assistant turn). The
+      // final message is always the user turn just appended, so this never
+      // empties the history.
+      const trimmed = nextMessages.slice(-ASK_HISTORY_LIMIT);
+      while (trimmed.length && trimmed[0].role !== "user") trimmed.shift();
+
       const { data, error: fnError } = await supabase.functions.invoke(
         "ask-karibu",
         {
           body: {
-            messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+            messages: trimmed.map((m) => ({ role: m.role, content: m.content })),
             city: activeCity,
+            sessionId: getAskSessionId(),
           },
         }
       );
