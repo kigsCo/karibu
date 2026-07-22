@@ -20,7 +20,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      # - run: npm run test:unit   # add when you have tests
+      - run: npm run test   # vitest run (one-shot); FIX_PLAN P0 #9
+      # NOTE: the pgTAP database tests (supabase/tests/*.sql, incl. the P0 #8
+      # improvement-window regression) are NOT run here — they need the local
+      # Supabase stack (`supabase db start && supabase test db`, Docker). Run them
+      # locally before shipping a migration; wiring them into CI is a follow-up.
 
   # The edge functions are Deno, so `npm run lint` and `npm run build` never see
   # them (eslint ignores supabase/functions/**). Without this job the security

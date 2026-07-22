@@ -83,7 +83,9 @@ export function useBusinesses({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(false);
-  // Keyset cursor: ranking_score of the last row of the previous page.
+  // Keyset cursor: the { score, id } of the last row of the previous page.
+  // Composite (not score alone) so it matches the ORDER BY exactly — see the
+  // filter note in fetchPage. null before the first page.
   const cursorRef = useRef(null);
   // Monotonic id so a stale in-flight page can't clobber a newer filter set.
   const requestRef = useRef(0);
@@ -111,7 +113,18 @@ export function useBusinesses({
       if (categorySlug) q = q.eq("category.slug", categorySlug);
       if (subTypeSlug) q = q.eq("sub_type.slug", subTypeSlug);
       const cursor = reset ? null : cursorRef.current;
-      if (cursor !== null) q = q.lt("ranking_score", cursor);
+      if (cursor !== null) {
+        // Composite keyset matching ORDER BY (ranking_score DESC, id DESC):
+        // the next page is everything ranked strictly lower, OR tied on score
+        // with a smaller id. Filtering on ranking_score alone (the previous
+        // bug) skipped rows that tied across a page boundary, and returned
+        // NOTHING once every score was equal — the state of a fresh database
+        // before calculate-rankings has run, where ranking_score is 0 on every
+        // row and page 2 of any list was empty.
+        q = q.or(
+          `ranking_score.lt.${cursor.score},and(ranking_score.eq.${cursor.score},id.lt.${cursor.id})`,
+        );
+      }
 
       const { data, error: qError } = await q;
 
@@ -129,7 +142,10 @@ export function useBusinesses({
       const mapped = (data || []).map(mapBusinessRow);
       setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
       if (data?.length) {
-        cursorRef.current = data[data.length - 1].ranking_score;
+        // Read the raw row (score + uuid) for the next composite cursor, not the
+        // mapped card shape (whose `id` is the slug).
+        const last = data[data.length - 1];
+        cursorRef.current = { score: last.ranking_score, id: last.id };
       }
       setDone(!data || data.length < PAGE_SIZE);
     },
