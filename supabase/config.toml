@@ -48,6 +48,19 @@ enable_signup = true
 enable_signup = true
 enable_confirmations = false
 
+# Google OAuth — powers "Continue with Google" on the /welcome landing page.
+# Disabled locally by default: the provider needs a real Google OAuth client,
+# and there is nothing to test against without one. To use it locally: create
+# a Web application OAuth client in Google Cloud Console with redirect URI
+# http://127.0.0.1:54321/auth/v1/callback, export
+# SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID / SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET,
+# and flip enabled = true. In the cloud the provider is configured in
+# Dashboard -> Authentication -> Providers (see SUPABASE_SETUP.md).
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+
 [edge_runtime]
 enabled = true
 # Per-request isolation in production; "oneshot" is fine for local serve.

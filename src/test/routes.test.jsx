@@ -33,6 +33,7 @@ const paths = [
   "/saved", // Placeholder
   "/profile", // Placeholder
   "/ask", // Ask Karibu (full-bleed)
+  "/welcome", // Sign-in / create-account landing (full-bleed)
   "/city", // City picker (full-bleed)
   "/search", // Search
   "/browse/beauty", // Sub-category picker (has-subs category from Discover)
