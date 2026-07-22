@@ -8,18 +8,33 @@ vi.mock("../lib/supabase", () => {
   const result = Promise.resolve({ data: null, error: null });
   const chain = {
     select: () => chain,
+    update: () => chain,
     eq: () => chain,
     lt: () => chain,
+    or: () => chain,
     in: () => chain,
     order: () => chain,
     limit: () => chain,
+    single: () => result,
     maybeSingle: () => result,
     then: (onFulfilled) => result.then(onFulfilled),
   };
   return {
     supabase: {
       from: () => chain,
-      auth: { getSession: () => Promise.resolve({ data: { session: null } }) },
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null } }),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe() {} } },
+        }),
+        signInWithOtp: () => Promise.resolve({ data: {}, error: null }),
+        signInWithOAuth: () => Promise.resolve({ data: {}, error: null }),
+        signInWithPassword: () =>
+          Promise.resolve({ data: { session: null }, error: null }),
+        signUp: () =>
+          Promise.resolve({ data: { user: {}, session: null }, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+      },
       functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
     },
   };

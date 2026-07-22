@@ -18,6 +18,7 @@ import CityPickerPage from "./pages/CityPickerPage.jsx";
 import ReviewComposePage from "./pages/ReviewComposePage.jsx";
 import GuideArticlePage from "./pages/GuideArticlePage.jsx";
 import MerchantDashboardPage from "./pages/MerchantDashboardPage.jsx";
+import WelcomePage from "./pages/WelcomePage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 export default function AppRoutes() {
@@ -38,6 +39,7 @@ export default function AppRoutes() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route element={<FullBleedLayout />}>
+          <Route path="welcome" element={<WelcomePage />} />
           <Route path="ask" element={<AskKaribuPage />} />
           <Route path="city" element={<CityPickerPage />} />
           <Route path="b/:slug/review" element={<ReviewComposePage />} />

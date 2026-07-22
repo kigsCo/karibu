@@ -99,6 +99,34 @@ off and compare an `x-karibu-internal-secret` header against
 They **fail closed**: with the secret unset they return 503 and do nothing. An
 unconfigured deploy is a visibly broken cron job, never an open endpoint.
 
+## Auth: Google sign-in and the profiles table
+
+The `/welcome` landing page offers three sign-in flavours: Google OAuth,
+email + password, and the passwordless magic link. Email/password and magic
+link work out of the box (GoTrue). Google needs one-time configuration:
+
+1. **Google Cloud Console** → APIs & Services → Credentials → Create
+   Credentials → *OAuth client ID* → Web application. Authorized redirect URI:
+   `https://jwiptjcpczamewmyaost.supabase.co/auth/v1/callback`
+   (plus `http://127.0.0.1:54321/auth/v1/callback` if you want it locally).
+2. **Supabase Dashboard** → Authentication → Providers → Google → enable, and
+   paste the client ID + secret. Nothing goes in the repo or in `VITE_*` vars.
+3. **Dashboard → Authentication → URL Configuration**: set the site URL to the
+   deployed frontend origin and add it to the redirect allow-list — the app
+   passes `redirectTo: <origin>/welcome`, which must be allow-listed or GoTrue
+   silently falls back to the site URL.
+4. Locally, the provider is `enabled = false` in `supabase/config.toml`; flip
+   it and export `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET` if you
+   need real Google locally. Without it, the button surfaces GoTrue's
+   "provider is not enabled" error — an honest failure, not a crash.
+
+Every signup (any flavour) fires the `on_auth_user_created` trigger
+(`20260722205636_create_profiles.sql`), which creates the user's row in
+`public.profiles` — the customer database. Profiles are owner-only under RLS:
+no anon access, and the client can update only `full_name`, `avatar_url`, and
+`home_city_id` (column-scoped grant; the `email` copy is trigger-maintained).
+`supabase test db` runs `supabase/tests/profiles_test.sql` against all of this.
+
 ## Scheduling the cron functions
 
 `moderate-reviews` runs hourly, `calculate-rankings` nightly at 03:00 EAT. Both
