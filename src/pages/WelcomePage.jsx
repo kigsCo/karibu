@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   X,
   Mail,
@@ -46,6 +46,7 @@ const GoogleG = () => (
 
 export default function WelcomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, loading } = useAuth();
 
   const [mode, setMode] = useState("signin"); // 'signin' | 'signup'
@@ -58,9 +59,12 @@ export default function WelcomePage() {
 
   // Already signed in (or the OAuth redirect just landed back here with a
   // session): go straight to the profile.
+  // Auth-gated flows pass state.next to come back here after sign-in. OAuth
+  // and magic-link redirects lose router state and fall back to /profile.
+  const next = location.state?.next || "/profile";
   useEffect(() => {
-    if (!loading && session) navigate("/profile", { replace: true });
-  }, [loading, session, navigate]);
+    if (!loading && session) navigate(next, { replace: true });
+  }, [loading, session, navigate, next]);
 
   const signInWithGoogle = async () => {
     if (busy) return;

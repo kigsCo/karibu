@@ -126,3 +126,19 @@ verify_jwt = false
 # the caller. Ungated, this is an open mail relay from our verified domain.
 [functions.send-onboarding-email]
 verify_jwt = false
+
+# User-acting: a signed-in user registers a new business or claims an existing
+# listing. JWT required for identity; the function validates all evidence
+# server-side (KRA format, own-folder storage paths, reference slugs) and
+# writes with the service role — there are no client INSERT policies on
+# businesses/business_claims/business_verifications by design.
+[functions.business-intake]
+verify_jwt = true
+
+# Staff-only: the onboarding review queue. JWT authenticates the caller; the
+# real authorization is profiles.is_staff, checked inside with the service
+# role (verify_jwt=true alone would admit any visitor — the anon key is a
+# valid JWT). Approvals fire send-onboarding-email server-to-server with the
+# x-karibu-internal-secret header.
+[functions.admin-review]
+verify_jwt = true

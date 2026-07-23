@@ -16,9 +16,12 @@ import SearchPage from "./pages/SearchPage.jsx";
 import AskKaribuPage from "./pages/AskKaribuPage.jsx";
 import CityPickerPage from "./pages/CityPickerPage.jsx";
 import ReviewComposePage from "./pages/ReviewComposePage.jsx";
+import ClaimBusinessPage from "./pages/ClaimBusinessPage.jsx";
 import GuideArticlePage from "./pages/GuideArticlePage.jsx";
 import MerchantDashboardPage from "./pages/MerchantDashboardPage.jsx";
+import RegisterBusinessPage from "./pages/RegisterBusinessPage.jsx";
 import WelcomePage from "./pages/WelcomePage.jsx";
+import AdminReviewPage from "./pages/AdminReviewPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 export default function AppRoutes() {
@@ -43,8 +46,11 @@ export default function AppRoutes() {
           <Route path="ask" element={<AskKaribuPage />} />
           <Route path="city" element={<CityPickerPage />} />
           <Route path="b/:slug/review" element={<ReviewComposePage />} />
+          <Route path="b/:slug/claim" element={<ClaimBusinessPage />} />
           <Route path="guides/:slug" element={<GuideArticlePage />} />
           <Route path="merchant" element={<MerchantDashboardPage />} />
+          <Route path="for-business/register" element={<RegisterBusinessPage />} />
+          <Route path="admin" element={<AdminReviewPage />} />
         </Route>
       </Route>
     </Routes>
