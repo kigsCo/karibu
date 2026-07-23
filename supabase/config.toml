@@ -126,3 +126,11 @@ verify_jwt = false
 # the caller. Ungated, this is an open mail relay from our verified domain.
 [functions.send-onboarding-email]
 verify_jwt = false
+
+# User-acting: a signed-in user registers a new business or claims an existing
+# listing. JWT required for identity; the function validates all evidence
+# server-side (KRA format, own-folder storage paths, reference slugs) and
+# writes with the service role — there are no client INSERT policies on
+# businesses/business_claims/business_verifications by design.
+[functions.business-intake]
+verify_jwt = true
