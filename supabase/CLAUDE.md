@@ -5,7 +5,7 @@ Area rules for the backend. Read the root `CLAUDE.md` first.
 ## Migrations (`migrations/`)
 - One concern per migration. Numbered, immutable once applied to staging/prod — never edit a shipped migration; write a new one.
 - Every new table: `ENABLE ROW LEVEL SECURITY` in the same migration that creates it. A table without RLS is a security hole.
-- UUID PKs (`uuid_generate_v4()`), `timestamptz NOT NULL DEFAULT now()` for time columns, `text` over `varchar`.
+- UUID PKs use `gen_random_uuid()` (pg_catalog, PG13+) — NOT `uuid_generate_v4()`: on cloud projects `uuid-ossp` lives in the `extensions` schema and `db push` sessions cannot resolve the unqualified name (this broke a prod deploy on 2026-07-23). `timestamptz NOT NULL DEFAULT now()` for time columns, `text` over `varchar`.
 - Add indexes in the same migration as the table: every FK, every hot-path filter/sort column, partial `WHERE status='active'`, GiST for geography, GIN+`pg_trgm` for fuzzy text.
 - Cached/derived columns (`rating`, `ranking_score`, ...) are maintained by trigger or cron — never trust client writes to them.
 - Use the `supabase-migration` and `rls-policy` skills.
