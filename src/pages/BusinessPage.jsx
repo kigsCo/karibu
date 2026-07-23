@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Heart, ChevronRight, ChevronLeft, Star,
   Phone, MessageCircle, Navigation, Globe, Clock, Check,
@@ -25,6 +25,7 @@ import { useLocalReviews } from "../context/LocalReviewsContext.jsx";
 // ---------- SCREEN: BUSINESS DETAIL ----------
 const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
   const b = payload || recommended[0];
+  const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
 
   // KAR-7: live-sourced payloads carry a slug — fetch the full row + published
@@ -346,6 +347,19 @@ const BusinessScreen = ({ payload, back, go, reviews = [], justPosted }) => {
           <ChevronRight size={16} className="text-clay" />
         </button>
       </div>
+
+      {/* Owner claim entry — only for live rows that nobody manages yet */}
+      {liveBiz && liveBiz.ownerId === null && b.slug && (
+        <div className="px-5 md:px-8 pt-4 pb-2 text-center">
+          <button
+            type="button"
+            onClick={() => navigate(`/b/${b.slug}/claim`)}
+            className="text-xs text-stone-400 underline underline-offset-2"
+          >
+            Own this business? Claim this listing
+          </button>
+        </div>
+      )}
     </div>
   );
 };

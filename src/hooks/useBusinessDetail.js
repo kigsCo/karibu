@@ -49,6 +49,7 @@ function mapDetailRow(row) {
     dbId: row.id,
     slug: row.slug,
     name: row.name,
+    ownerId: row.owner_id ?? null,
     hood: row.hood,
     rating: Number(row.rating) || 0,
     reviews: row.review_count ?? 0,
@@ -115,7 +116,7 @@ export function useBusinessDetail(slug) {
         const { data: biz, error: bizError } = await supabase
           .from("businesses")
           .select(
-            "id, slug, name, hood, about, price_range, tags, tier, rating, review_count, hours_json, services_json, phone, whatsapp, mpesa_till, mpesa_paybill, hero_image_url, category:categories(slug, label)",
+            "id, slug, name, hood, about, price_range, tags, tier, rating, review_count, hours_json, services_json, phone, whatsapp, mpesa_till, mpesa_paybill, hero_image_url, owner_id, category:categories(slug, label)",
           )
           .eq("slug", slug)
           .eq("status", "active")
