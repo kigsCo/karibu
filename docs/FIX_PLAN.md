@@ -299,7 +299,10 @@
   claims + evidence storage + human review; OTP/iTax still open.
 - **Follow-up (from final review):** storage-abuse posture for the onboarding buckets —
   cleanup cron for orphaned uploads + optional per-user object cap; direct-to-bucket
-  uploads are currently unmetered.
+  uploads are currently unmetered. Implementation note (learned 2026-07-23): the cron
+  must delete through the Storage API (service-role `storage.from(...).remove(paths)`
+  in an edge function) — a `storage.protect_delete()` trigger blocks direct SQL
+  deletes on `storage.objects`.
 - **Verify:** end-to-end onboarding on staging: submit → pending (invisible to anon via
   existing RLS) → approve → active + email; bucket objects unreadable with the anon key.
 
