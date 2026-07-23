@@ -42,7 +42,14 @@ export default function EditListingSection({ business, onSaved }) {
     setGallery(business.gallery_image_urls ?? []);
     setHero(business.hero_image_url ?? null);
     setNotice(null);
-  }, [business]);
+    // Reseed only on a genuine listing switch: a same-id refetch after a
+    // successful save (onSaved -> page refresh -> new `business` reference,
+    // same id) must not clobber local edit state — that state already holds
+    // the just-saved values, and clobbering it also drops in-flight edits
+    // (typed text, newly uploaded photos) and instantly clears the "Saved."
+    // notice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business.id]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 

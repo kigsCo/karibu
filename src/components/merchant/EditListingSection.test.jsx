@@ -82,3 +82,25 @@ test("adding photos uploads to the owner folder and joins the gallery", async ()
   expect(sent.gallery_image_urls.length).toBe(1);
   expect(sent.gallery_image_urls[0]).toContain("/business-photos/u1/");
 });
+
+test("a same-id refetch does not clobber in-flight edits", async () => {
+  const user = userEvent.setup();
+  const { rerender } = render(<EditListingSection business={BIZ} onSaved={vi.fn()} />);
+  const phone = screen.getByLabelText(/phone/i);
+  await user.clear(phone);
+  await user.type(phone, "0722000000");
+  // Same id, new object reference — as a page refresh after save would deliver.
+  rerender(<EditListingSection business={{ ...BIZ }} onSaved={vi.fn()} />);
+  expect(screen.getByLabelText(/phone/i)).toHaveValue("0722000000");
+});
+
+test("a genuine listing switch reseeds the form", () => {
+  const { rerender } = render(<EditListingSection business={BIZ} onSaved={vi.fn()} />);
+  rerender(
+    <EditListingSection
+      business={{ ...BIZ, id: "b2", phone: "0733999999" }}
+      onSaved={vi.fn()}
+    />,
+  );
+  expect(screen.getByLabelText(/phone/i)).toHaveValue("0733999999");
+});
