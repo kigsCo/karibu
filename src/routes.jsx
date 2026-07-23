@@ -18,6 +18,7 @@ import CityPickerPage from "./pages/CityPickerPage.jsx";
 import ReviewComposePage from "./pages/ReviewComposePage.jsx";
 import GuideArticlePage from "./pages/GuideArticlePage.jsx";
 import MerchantDashboardPage from "./pages/MerchantDashboardPage.jsx";
+import RegisterBusinessPage from "./pages/RegisterBusinessPage.jsx";
 import WelcomePage from "./pages/WelcomePage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
@@ -45,6 +46,7 @@ export default function AppRoutes() {
           <Route path="b/:slug/review" element={<ReviewComposePage />} />
           <Route path="guides/:slug" element={<GuideArticlePage />} />
           <Route path="merchant" element={<MerchantDashboardPage />} />
+          <Route path="for-business/register" element={<RegisterBusinessPage />} />
         </Route>
       </Route>
     </Routes>
