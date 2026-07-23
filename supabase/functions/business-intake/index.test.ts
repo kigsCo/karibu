@@ -264,6 +264,19 @@ Deno.test("register: the 4th registration in a day is a 429", async () => {
   });
 });
 
+Deno.test("register: a failed-validation attempt does not consume the per-user daily budget", async () => {
+  await withStubs(async (handler) => {
+    // An invalid submission (bad KRA PIN) must 400 without spending any of
+    // the merchant's 3 daily register attempts — all 3 real ones still succeed.
+    const bad = await handler(post({ ...REGISTER_BODY, kra_pin: "B123456789Z" }));
+    assertEquals(bad.status, 400);
+
+    for (let i = 0; i < 3; i++) {
+      assertEquals((await handler(post(REGISTER_BODY))).status, 200);
+    }
+  });
+});
+
 Deno.test("claim: happy path inserts a pending claim", async () => {
   await withStubs(async (handler) => {
     const res = await handler(post(CLAIM_BODY));

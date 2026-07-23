@@ -58,13 +58,10 @@ Deno.serve(async (req: Request) => {
   const service = createServiceClient();
   const ip = clientIpFromXff(req.headers.get("x-forwarded-for"));
 
-  // --- Rate limits (record-first helpers; RLS-independent) ----------------
+  // --- Per-IP rate limit only, up front (record-first helper; RLS-independent).
+  // The per-USER budget is spent inside register()/claim(), only once a
+  // submission has passed full field validation — see the note there.
   if (!(await checkIpRateLimit(service, ip, "business-intake", IP_MAX_PER_DAY, DAY_SECONDS))) {
-    return errorResponse("Rate limit", 429);
-  }
-  const userKey = `business-intake:${action}:${uid}`;
-  const userMax = action === "register" ? REGISTER_MAX_PER_DAY : CLAIM_MAX_PER_DAY;
-  if (!(await checkGlobalRateLimit(service, userKey, userMax, DAY_SECONDS))) {
     return errorResponse("Rate limit", 429);
   }
 
@@ -124,6 +121,14 @@ async function register(service: any, uid: string, body: Record<string, unknown>
   }
   if (lat !== null && lng !== null && !isInKenya(lat, lng)) {
     return errorResponse("Location pin must be inside Kenya", 400);
+  }
+
+  // --- Spend the per-user daily budget only now that the submission is valid.
+  // A malformed request (bad KRA PIN, too few photos, ...) must not cost the
+  // merchant one of their 3 real attempts for the day.
+  const userKey = `business-intake:register:${uid}`;
+  if (!(await checkGlobalRateLimit(service, userKey, REGISTER_MAX_PER_DAY, DAY_SECONDS))) {
+    return errorResponse("Rate limit", 429);
   }
 
   // --- Resolve reference slugs (service role; anon could read these anyway)
@@ -204,7 +209,15 @@ async function register(service: any, uid: string, body: Record<string, unknown>
 
   if (verError) {
     console.error("business-intake: verification insert failed:", verError.message);
-    await service.from("businesses").delete().eq("id", created.id);
+    const { error: deleteError } = await service.from("businesses").delete().eq("id", created.id);
+    if (deleteError) {
+      // An orphaned pending business with no evidence row would otherwise be
+      // silently undetectable — surface it so it can be cleaned up by hand.
+      console.error(
+        `business-intake: compensating delete of business ${created.id} ALSO failed:`,
+        deleteError.message,
+      );
+    }
     return errorResponse("Could not save your application", 500);
   }
 
@@ -224,6 +237,12 @@ async function claim(service: any, uid: string, body: Record<string, unknown>) {
   }
   if (!ownsPath(body.id_document_path, uid)) {
     return errorResponse("`id_document_path` must be an upload in your own folder", 400);
+  }
+
+  // --- Spend the per-user daily budget only now that the submission is valid.
+  const userKey = `business-intake:claim:${uid}`;
+  if (!(await checkGlobalRateLimit(service, userKey, CLAIM_MAX_PER_DAY, DAY_SECONDS))) {
+    return errorResponse("Rate limit", 429);
   }
 
   const { data: biz } = await service
