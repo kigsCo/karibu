@@ -134,3 +134,11 @@ verify_jwt = false
 # businesses/business_claims/business_verifications by design.
 [functions.business-intake]
 verify_jwt = true
+
+# Staff-only: the onboarding review queue. JWT authenticates the caller; the
+# real authorization is profiles.is_staff, checked inside with the service
+# role (verify_jwt=true alone would admit any visitor — the anon key is a
+# valid JWT). Approvals fire send-onboarding-email server-to-server with the
+# x-karibu-internal-secret header.
+[functions.admin-review]
+verify_jwt = true
