@@ -5,7 +5,10 @@
 -- decided only by admin-review. The claimant may read their own claims.
 
 CREATE TABLE business_claims (
-  id               uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  -- gen_random_uuid (pg_catalog, PG13+): uuid_generate_v4 lives in the
+  -- `extensions` schema on cloud projects and the CLI's migration session
+  -- does not resolve it via search_path — this failed on `db push`.
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id      uuid NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   claimant_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status           text NOT NULL DEFAULT 'pending'

@@ -5,7 +5,8 @@
 -- service role (admin-review) can read or write. Append-only by convention.
 
 CREATE TABLE admin_decisions (
-  id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  -- gen_random_uuid: see 20260723100100 — search_path-safe on cloud db push.
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   subject_type text NOT NULL CHECK (subject_type IN ('registration','claim')),
   subject_id   uuid NOT NULL,
   action       text NOT NULL CHECK (action IN ('approved','rejected')),
