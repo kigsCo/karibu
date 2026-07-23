@@ -41,6 +41,7 @@ const paths = [
   "/b/the-talisman", // Business detail (deep link, no router state)
   "/guides/using-mpesa", // Guide article (deep link, no router state)
   "/merchant", // Merchant dashboard (full-bleed)
+  "/admin", // Staff onboarding review (full-bleed, out of nav — URL only)
   "/no-such-page", // 404 -> NotFoundPage under AppShell
 ];
 

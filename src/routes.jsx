@@ -21,6 +21,7 @@ import GuideArticlePage from "./pages/GuideArticlePage.jsx";
 import MerchantDashboardPage from "./pages/MerchantDashboardPage.jsx";
 import RegisterBusinessPage from "./pages/RegisterBusinessPage.jsx";
 import WelcomePage from "./pages/WelcomePage.jsx";
+import AdminReviewPage from "./pages/AdminReviewPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
 export default function AppRoutes() {
@@ -49,6 +50,7 @@ export default function AppRoutes() {
           <Route path="guides/:slug" element={<GuideArticlePage />} />
           <Route path="merchant" element={<MerchantDashboardPage />} />
           <Route path="for-business/register" element={<RegisterBusinessPage />} />
+          <Route path="admin" element={<AdminReviewPage />} />
         </Route>
       </Route>
     </Routes>
