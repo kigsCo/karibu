@@ -295,6 +295,8 @@
   `active` + `verified_at` → welcome email. **Private storage buckets** for KRA PINs /
   owner-ID scans with owner-only + service-role policies — the spec's PII requirement
   becomes real the day this form exists, so build buckets and policies first.
+- **Progress:** Spine shipped (branch `feat/business-onboarding-spine`): intake form +
+  claims + evidence storage + human review; OTP/iTax still open.
 - **Verify:** end-to-end onboarding on staging: submit → pending (invisible to anon via
   existing RLS) → approve → active + email; bucket objects unreadable with the anon key.
 
@@ -310,6 +312,8 @@
   with a decision log (new `admin_decisions` table), flagged-review queue
   (publish/reject), candidate-listing reconciliation. Auth-gated to staff emails; served
   by service-role edge functions with an admin allowlist — never the anon key.
+- **Progress:** Minimal queue shipped at `/admin` (`profiles.is_staff` +
+  `admin_decisions`).
 - **Verify:** approve flow flips `pending → active` and logs who/when; non-staff get 403.
 
 ### 25. Merchant dashboard on real data — L (depends on 6)

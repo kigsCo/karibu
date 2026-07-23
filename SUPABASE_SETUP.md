@@ -71,7 +71,7 @@ Everything else is a Supabase **edge-function secret**
 | Secret | Used by |
 |---|---|
 | `ANTHROPIC_API_KEY` | `ask-karibu`, `moderate-reviews` |
-| `INTERNAL_FUNCTION_SECRET` | `moderate-reviews`, `calculate-rankings`, `send-onboarding-email` — **required**, `openssl rand -hex 32` |
+| `INTERNAL_FUNCTION_SECRET` | `moderate-reviews`, `calculate-rankings`, `send-onboarding-email`, `admin-review` (caller — attaches it when triggering `send-onboarding-email` on approval) — **required**, `openssl rand -hex 32` |
 | `MPESA_ENABLED` | `mpesa-stk-push`. Set to the exact string `true` to accept payments. Anything else, including unset, means the function returns 503 and does nothing. |
 | `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY` | `mpesa-stk-push` |
 | `MPESA_CALLBACK_SECRET` | `mpesa-stk-push`, `mpesa-callback` — **required**, `openssl rand -hex 32` |

@@ -17,6 +17,7 @@ Built by Kigs Apex Solutions, Nairobi. Launch cities: Nairobi, Mombasa, Naivasha
 - **Anything public that costs money is metered.** `ask-karibu` spends Anthropic tokens and `mpesa-stk-push` rings a phone the caller does not own; both are rate-limited before they reach the expensive call, and M-Pesa is off entirely unless `MPESA_ENABLED=true`.
 - **Cloud and local disagree about default privileges.** Locally, migrations run as `postgres` and the API roles get *no* grants; in the cloud they get *all* of them. `20260710160000_lock_down_api_role_grants.sql` revokes and re-grants explicitly so both converge. Never rely on a table's default grants — and remember RLS does not apply to materialized views. PostGIS and `pg_trgm` live in the unexposed `extensions` schema, not `public`, so migrations must write `extensions.geography(...)` and `extensions.gin_trgm_ops`.
 - **Persisted reviews need an auth flow.** `submit-review` requires a signed-in user; until sign-in ships, guest reviews stay local-only (optimistic UI, console warning).
+- **The business onboarding spine has shipped** (branch `feat/business-onboarding-spine`): the `business-intake` and `admin-review` edge functions back a real register-or-claim flow (`/for-business/register`, `/b/:slug/claim`) with human review at `/admin` and welcome-email activation; staff are appointed with `UPDATE profiles SET is_staff = true`.
 - **Current sprint:** Backend foundation — see `docs/SPRINT_01.md`. **Target:** a launch-ready backend (solo dev).
 
 ## Architecture (intentionally simple)
