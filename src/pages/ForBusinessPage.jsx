@@ -1,8 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, TrendingUp, Check, Shield, Award, AlertCircle, X } from "lucide-react";
 import Badge from "../components/Badge.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import ApplicationsBlock from "../components/business/ApplicationsBlock.jsx";
 
 const BusinessSignupScreen = ({ back }) => {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  const startApplication = () => {
+    if (session) navigate("/for-business/register");
+    else navigate("/welcome", { state: { next: "/for-business/register" } });
+  };
+
   const tiers = [
     {
       name: "Free Listing",
@@ -101,6 +111,8 @@ const BusinessSignupScreen = ({ back }) => {
         </div>
       </div>
 
+      <ApplicationsBlock />
+
       {/* Tiers */}
       <div className="px-5 md:px-8 pt-5 pb-2">
         <h3 className="font-serif-d text-xl text-ink mb-3">Choose your plan</h3>
@@ -133,6 +145,7 @@ const BusinessSignupScreen = ({ back }) => {
                 ))}
               </ul>
               <button
+                onClick={startApplication}
                 className={`w-full py-2.5 rounded-xl text-sm font-semibold ${
                   t.highlight ? "bg-ochre text-ink" : "bg-ink text-white"
                 }`}
