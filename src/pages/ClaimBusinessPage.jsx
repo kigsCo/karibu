@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { functionErrorMessage } from "../lib/functionError";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -138,7 +139,7 @@ export default function ClaimBusinessPage() {
           note: form.note.trim() || undefined,
         },
       });
-      if (fnError) throw new Error(fnError.message || "Submission failed");
+      if (fnError) throw new Error(await functionErrorMessage(fnError, "Submission failed"));
       if (data?.error) throw new Error(data.error);
       setDone(true);
     } catch (e) {

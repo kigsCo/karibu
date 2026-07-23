@@ -83,3 +83,36 @@ test("signed in: a complete claim submits and confirms", async () => {
   expect(body.business_id).toBe("b1");
   expect(await screen.findByText(/under review/i)).toBeInTheDocument();
 });
+
+test("a 409 from the server surfaces the real message, not the generic one", async () => {
+  authState.current = { session: { user: { id: "u1" } }, user: { id: "u1" } };
+  bizState.current = { id: "b1", name: "Unowned Co", owner_id: null };
+  invokeSpy.mockImplementationOnce(() =>
+    Promise.resolve({
+      data: null,
+      error: {
+        message: "Edge Function returned a non-2xx status code",
+        context: {
+          json: async () => ({
+            error: "You already have a claim under review for this listing",
+          }),
+        },
+      },
+    }),
+  );
+  const user = userEvent.setup();
+  mount();
+
+  await user.type(await screen.findByLabelText(/kra pin/i), "A123456789Z");
+  await user.type(screen.getByLabelText(/phone/i), "0712345678");
+  await user.upload(
+    screen.getByLabelText(/id document/i),
+    new File(["x"], "id.jpg", { type: "image/jpeg" }),
+  );
+  await user.click(screen.getByRole("button", { name: /submit claim/i }));
+
+  expect(
+    await screen.findByText("You already have a claim under review for this listing"),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Edge Function returned a non-2xx status code")).not.toBeInTheDocument();
+});

@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { functionErrorMessage } from "../lib/functionError";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useReferenceData } from "../context/ReferenceDataContext.jsx";
 
@@ -62,6 +63,11 @@ export default function RegisterBusinessPage() {
     () => categories.find((c) => c.key === form.category_slug) || null,
     [categories, form.category_slug],
   );
+  // Restaurants carry their sub-types as `cuisineTags` with `subTypes: []`
+  // (see ReferenceDataContext) — fall back to those so the dropdown isn't
+  // permanently disabled for that category.
+  const subTypeOptions =
+    (category?.subTypes?.length ? category.subTypes : category?.cuisineTags) || [];
 
   if (!session) {
     return (
@@ -186,7 +192,7 @@ export default function RegisterBusinessPage() {
           id_document_path: idPath,
         },
       });
-      if (fnError) throw new Error(fnError.message || "Submission failed");
+      if (fnError) throw new Error(await functionErrorMessage(fnError, "Submission failed"));
       if (data?.error) throw new Error(data.error);
       setDone(true);
     } catch (e) {
@@ -233,9 +239,9 @@ export default function RegisterBusinessPage() {
               <label className={label} htmlFor="rb-subtype">Sub-type (optional)</label>
               <select id="rb-subtype" className={field}
                 value={form.sub_type_slug} onChange={set("sub_type_slug")}
-                disabled={!category || !(category.subTypes || []).length}>
+                disabled={!category || !subTypeOptions.length}>
                 <option value="">Choose...</option>
-                {(category?.subTypes || []).map((s) => (
+                {subTypeOptions.map((s) => (
                   <option key={s.key} value={s.key}>{s.label}</option>
                 ))}
               </select>

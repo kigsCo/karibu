@@ -3,6 +3,7 @@
 // nothing on this page grants any capability by itself.
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { functionErrorMessage } from "../lib/functionError";
 import { useAuth } from "../context/AuthContext.jsx";
 
 function QueueCard({ title, subtitle, fields, docUrl, onApprove, onReject }) {
@@ -100,7 +101,11 @@ export default function AdminReviewPage() {
       body: { action: "queue" },
     });
     if (fnError || data?.error) {
-      setError(fnError?.message || data?.error || "Could not load the queue");
+      setError(
+        fnError
+          ? await functionErrorMessage(fnError, "Could not load the queue")
+          : data?.error || "Could not load the queue",
+      );
       return;
     }
     setError(null);
@@ -117,7 +122,11 @@ export default function AdminReviewPage() {
         body: { action, kind, id, ...(reason ? { reason } : {}) },
       });
       if (fnError || data?.error) {
-        setError(fnError?.message || data?.error || "Action failed");
+        setError(
+          fnError
+            ? await functionErrorMessage(fnError, "Action failed")
+            : data?.error || "Action failed",
+        );
       }
       await loadQueue();
     },
