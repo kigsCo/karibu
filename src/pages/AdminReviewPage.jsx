@@ -70,12 +70,16 @@ function QueueCard({ title, subtitle, fields, docUrl, onApprove, onReject }) {
 }
 
 export default function AdminReviewPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [isStaff, setIsStaff] = useState(null); // null = checking
   const [queue, setQueue] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Auth is still resolving (e.g. a direct /admin load, getSession() not
+    // yet settled) — stay in the "checking" state rather than flashing "Not
+    // authorized" for a staff member whose session hasn't loaded yet.
+    if (loading) return undefined;
     if (!user) {
       setIsStaff(false);
       return undefined;
@@ -89,7 +93,7 @@ export default function AdminReviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, loading]);
 
   const loadQueue = useCallback(async () => {
     const { data, error: fnError } = await supabase.functions.invoke("admin-review", {

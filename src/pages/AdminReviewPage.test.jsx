@@ -25,7 +25,9 @@ const { authState, profileState, invokeSpy } = vi.hoisted(() => {
     return Promise.resolve({ data: { ok: true }, error: null });
   });
   return {
-    authState: { current: { session: { user: { id: "u1" } }, user: { id: "u1" } } },
+    authState: {
+      current: { session: { user: { id: "u1" } }, user: { id: "u1" }, loading: false },
+    },
     profileState: { current: { is_staff: true } },
     invokeSpy,
   };
@@ -54,6 +56,19 @@ function mount() {
 
 beforeEach(() => {
   invokeSpy.mockClear();
+  // Default back to a resolved, signed-in session — the loading-phase test
+  // below overrides this explicitly.
+  authState.current = { session: { user: { id: "u1" } }, user: { id: "u1" }, loading: false };
+});
+
+test("auth still resolving: no Not-authorized flash, queue never requested", async () => {
+  authState.current = { session: null, user: null, loading: true };
+  mount();
+  // Let any effects settle — loading=true must short-circuit before either
+  // the is_staff read or the "Not authorized" render.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByText(/not authorized/i)).not.toBeInTheDocument();
+  expect(invokeSpy).not.toHaveBeenCalled();
 });
 
 test("non-staff: Not authorized, and the queue is never requested", async () => {
