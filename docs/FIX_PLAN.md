@@ -327,6 +327,10 @@
   via `owner_id`, stats from `mv_business_review_stats` (service-role edge fn — the MV is
   deliberately revoked from client roles, `migrations/20260710160000:57-58`), and real
   recent reviews. Requires owner-claiming in onboarding (task 22).
+- **Progress:** merchant dashboard live on real data (branch `feat/merchant-dashboard`) —
+  owner listings via `owner_id`, `merchant-stats` fn (MV + live pending + trend),
+  safe-fields self-editing via column-scoped grant; engagement analytics still open
+  (needs an events pipeline).
 
 ### 26. Port calculate-rankings to one SQL UPDATE — M
 - **What:** Needed before ~1,500+ businesses (year-1 spec): replace the per-row PostgREST
