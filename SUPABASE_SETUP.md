@@ -49,11 +49,15 @@ inactivity** — fine before launch, not after. Both are tracked in
   | `mpesa-stk-push` | false | `MPESA_ENABLED=true` + M-Pesa creds |
   | `mpesa-callback` | false | `MPESA_CALLBACK_SECRET` |
 
-Not yet done: **no secrets set, no cron schedules, no frontend host.** Setting
-the secrets below and scheduling the three crons is what turns these live-but-inert
-functions on. The functions were deployed with the Supabase MCP `deploy_edge_function`
-tool rather than the CLI; the CI deploy job stays disarmed (`SUPABASE_PROJECT_REF`
-unset) and setting it later simply re-deploys the same code on the next push to `main`.
+Configured as of 2026-07-23: secrets set (`ANTHROPIC_API_KEY`,
+`INTERNAL_FUNCTION_SECRET` — rotated, Vault kept in sync; `RESEND_API_KEY`
+still pending a verified Karibu sender domain in Resend), all three crons
+scheduled and active, and the frontend live on Vercel (auto-deploys from
+`main`). The CI deploy job is armed, so every push to `main` re-deploys the
+edge functions; manual `supabase functions deploy` remains a harmless no-op
+on top of that. When rotating `INTERNAL_FUNCTION_SECRET`, update BOTH the
+edge-function secret and the Vault copy (`vault.update_secret`) — the crons
+authenticate with the Vault value and 401 the moment the two disagree.
 
 ## Environment variables
 
