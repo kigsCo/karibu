@@ -4,6 +4,7 @@
 // chips. Degrades to nothing on any error or when there is nothing to show —
 // it must never blank the marketing page.
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -30,6 +31,7 @@ function StatusChip({ map, status }) {
 
 export default function ApplicationsBlock() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [apps, setApps] = useState(null);
 
   useEffect(() => {
@@ -77,7 +79,18 @@ export default function ApplicationsBlock() {
               <p className="font-semibold text-sm">{b.name}</p>
               <p className="text-xs text-stone-500">New listing</p>
             </div>
-            <StatusChip map={BUSINESS_STATUS} status={b.status} />
+            <div className="flex items-center">
+              <StatusChip map={BUSINESS_STATUS} status={b.status} />
+              {b.status === "active" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/merchant")}
+                  className="text-xs font-semibold text-forest ml-2"
+                >
+                  Open dashboard
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {apps.claims.map((c) => (
