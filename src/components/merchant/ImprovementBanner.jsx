@@ -4,11 +4,17 @@ import { Shield, AlertCircle } from "lucide-react";
 
 function stateOf(rating, improvementUntil) {
   if (improvementUntil) return "window";
-  if (rating > 0 && rating < 3.8) return "warning";
+  if (!rating || rating <= 0) return "new";
+  if (rating < 3.8) return "warning";
   return "healthy";
 }
 
 const COPY = {
+  new: {
+    title: "Just getting started",
+    body: "Your first customer reviews will appear here. Ratings above 3.5★ keep a listing in good standing.",
+    wrap: "border-forest bg-forest-soft", icon: "bg-forest", text: "text-forest",
+  },
   healthy: {
     title: "Healthy standing",
     body: "Your rating is above the 3.5★ threshold. Keep responding to what customers say and you'll stay in good standing.",
@@ -28,7 +34,7 @@ const COPY = {
 
 export default function ImprovementBanner({ rating, improvementUntil }) {
   const s = COPY[stateOf(rating, improvementUntil)];
-  const Icon = s === COPY.healthy ? Shield : AlertCircle;
+  const Icon = s === COPY.healthy || s === COPY.new ? Shield : AlertCircle;
   return (
     <div className={`mt-4 p-4 rounded-2xl border ${s.wrap}`}>
       <div className="flex items-start gap-3">

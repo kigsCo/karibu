@@ -43,7 +43,7 @@ function CenteredNote({ title, body, cta, onCta }) {
 export default function MerchantDashboardPage() {
   const navigate = useNavigate();
   const { session, loading: authLoading, signOut } = useAuth();
-  const { businesses, loading, refresh } = useMyBusinesses();
+  const { businesses, loading, error, refresh } = useMyBusinesses();
   const [selectedId, setSelectedId] = useState(null);
 
   const active = useMemo(
@@ -70,6 +70,15 @@ export default function MerchantDashboardPage() {
     );
   }
 
+  if ((businesses ?? []).length === 0 && error) {
+    return (
+      <CenteredNote
+        title="Couldn't load your listings"
+        body="Something went wrong on our side. Pull to refresh or try again shortly."
+      />
+    );
+  }
+
   if ((businesses ?? []).length === 0) {
     return (
       <CenteredNote
@@ -82,10 +91,18 @@ export default function MerchantDashboardPage() {
   }
 
   if (!business) {
+    if (pending.length > 0) {
+      return (
+        <CenteredNote
+          title="Under review"
+          body={`${pending.map((p) => p.name).join(", ")} ${pending.length === 1 ? "is" : "are"} still being reviewed by our Nairobi team — allow up to 48 hours. You'll manage it here once it goes live.`}
+        />
+      );
+    }
     return (
       <CenteredNote
-        title="Under review"
-        body={`${pending.map((p) => p.name).join(", ")} ${pending.length === 1 ? "is" : "are"} still being reviewed by our Nairobi team — allow up to 48 hours. You'll manage it here once it goes live.`}
+        title="Not currently listed"
+        body="None of your listings are live right now. Contact hello@karibu.co.ke if you think this is a mistake."
       />
     );
   }

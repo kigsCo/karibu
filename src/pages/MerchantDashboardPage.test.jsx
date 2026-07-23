@@ -55,6 +55,25 @@ test("no listings: register CTA", async () => {
   expect(await screen.findByText("REGISTER ROUTE")).toBeInTheDocument();
 });
 
+test("load error: neutral message, no register CTA", () => {
+  authState.current = { session: { user: { id: "u1" } }, user: { id: "u1" }, loading: false, signOut: vi.fn() };
+  bizState.current = { businesses: [], loading: false, error: "boom", refresh: vi.fn() };
+  mount();
+  expect(screen.getByText("Couldn't load your listings")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /list your business/i })).not.toBeInTheDocument();
+});
+
+test("suspended-only: not currently listed, no under-review copy", () => {
+  authState.current = { session: { user: { id: "u1" } }, user: { id: "u1" }, loading: false, signOut: vi.fn() };
+  bizState.current = {
+    businesses: [{ ...ACTIVE, id: "s1", status: "suspended", name: "Suspended Co" }],
+    loading: false, error: null, refresh: vi.fn(),
+  };
+  mount();
+  expect(screen.getByText("Not currently listed")).toBeInTheDocument();
+  expect(screen.queryByText(/under review/i)).not.toBeInTheDocument();
+});
+
 test("pending-only: under-review panel, no dashboard tiles", () => {
   bizState.current = {
     businesses: [{ ...ACTIVE, id: "p1", status: "pending", name: "Pending Co" }],
