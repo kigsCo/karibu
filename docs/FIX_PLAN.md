@@ -297,6 +297,9 @@
   becomes real the day this form exists, so build buckets and policies first.
 - **Progress:** Spine shipped (branch `feat/business-onboarding-spine`): intake form +
   claims + evidence storage + human review; OTP/iTax still open.
+- **Follow-up (from final review):** storage-abuse posture for the onboarding buckets —
+  cleanup cron for orphaned uploads + optional per-user object cap; direct-to-bucket
+  uploads are currently unmetered.
 - **Verify:** end-to-end onboarding on staging: submit → pending (invisible to anon via
   existing RLS) → approve → active + email; bucket objects unreadable with the anon key.
 
