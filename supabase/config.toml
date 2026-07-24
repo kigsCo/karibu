@@ -142,3 +142,11 @@ verify_jwt = true
 # x-karibu-internal-secret header.
 [functions.admin-review]
 verify_jwt = true
+
+# Owner-only: dashboard stats the client cannot safely read itself — the
+# review-stats materialized view ignores RLS (never client-granted), and
+# pending reviews are invisible to owners under RLS. JWT authenticates;
+# the owner_id check inside is the authorization. No rate limit: authed,
+# ownership-gated, no external cost.
+[functions.merchant-stats]
+verify_jwt = true

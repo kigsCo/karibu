@@ -87,5 +87,8 @@ jobs:
       - run: supabase functions deploy mpesa-stk-push
       - run: supabase functions deploy mpesa-callback
       - run: supabase functions deploy send-onboarding-email
+      - run: supabase functions deploy business-intake
+      - run: supabase functions deploy admin-review
+      - run: supabase functions deploy merchant-stats
 
 # The frontend is deployed by Vercel via its own GitHub integration (not in this workflow).

@@ -327,6 +327,16 @@
   via `owner_id`, stats from `mv_business_review_stats` (service-role edge fn — the MV is
   deliberately revoked from client roles, `migrations/20260710160000:57-58`), and real
   recent reviews. Requires owner-claiming in onboarding (task 22).
+- **Progress:** merchant dashboard shipped (branch `feat/merchant-dashboard`); cloud:
+  migration via db push + function via CI on merge — owner listings via `owner_id`,
+  `merchant-stats` fn (MV + live pending + trend), safe-fields self-editing via
+  column-scoped grant; engagement analytics still open (needs an events pipeline).
+- **Follow-up:** hero image management — intake hero isn't in the gallery manager and
+  can dangle if its gallery photo is removed; needs a hero picker or hero-follows-gallery
+  rule.
+- **Follow-up:** editor captures email/website/address/gallery but BusinessPage doesn't
+  render them yet (and merchant-stats returns five_star/one_star that no tile shows) —
+  surface or trim.
 
 ### 26. Port calculate-rankings to one SQL UPDATE — M
 - **What:** Needed before ~1,500+ businesses (year-1 spec): replace the per-row PostgREST

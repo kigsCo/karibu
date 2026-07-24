@@ -18,6 +18,7 @@ import { useMyReviews } from "../hooks/useMyReviews.js";
 import { useVisitHistory } from "../hooks/useVisitHistory.js";
 import InitialsAvatar from "../components/profile/InitialsAvatar.jsx";
 import HomeCitySection from "../components/profile/HomeCitySection.jsx";
+import MyBusinessSection from "../components/profile/MyBusinessSection.jsx";
 import MyReviewsSection from "../components/profile/MyReviewsSection.jsx";
 import VisitHistorySection from "../components/profile/VisitHistorySection.jsx";
 
@@ -178,6 +179,8 @@ export default function ProfilePage() {
             onSelect={selectHomeCity}
           />
         )}
+
+        <MyBusinessSection />
 
         <MyReviewsSection reviews={reviews} loading={reviewsLoading} />
 
